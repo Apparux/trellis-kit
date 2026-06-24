@@ -84,11 +84,20 @@ SKIP existing: .claude/commands/dev.md
 
 ## Daily Workflow
 
-Start new work in Claude Code with `/dev`:
+Start new work in Claude Code with `/dev`. Recommended form:
 
 ```text
-/dev 新需求：实现 xxx。写完后生成 handoff，自动 commit，并自动触发 Codex Review。不要 push，不要 finish-work。
+/dev 新需求：实现 xxx
 ```
+
+The `新需求：` prefix is useful for clarity, but it is not required. Any explicit implementation request after `/dev` triggers the default delivery flow. Examples:
+
+```text
+/dev 实现 xxx
+/dev 帮我实现 xxx，并更新相关测试
+```
+
+The default delivery flow is built into the `/dev` command template: after implementation, generate the handoff, commit locally, run local Codex Review, and stop before push or finish-work.
 
 Claude Code should:
 
@@ -98,8 +107,8 @@ Claude Code should:
 4. Add the Delivery Gate from `.claude/commands/dev.md`.
 5. Implement the task.
 6. Generate `.trellis/tasks/<task>/reviews/codex-handoff.md` from the installed handoff template.
-7. Commit locally when requested.
-8. Run local Codex Review.
+7. Commit locally automatically.
+8. Run local Codex Review automatically.
 9. Fix P0/P1 issues by default.
 10. Run Codex Re-Review when fixes were made.
 11. Stop before push, merge, rebase, or finish-work unless explicitly authorized.

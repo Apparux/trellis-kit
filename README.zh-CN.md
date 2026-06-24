@@ -84,11 +84,20 @@ SKIP existing: .claude/commands/dev.md
 
 ## 日常工作流
 
-在 Claude Code 中用 `/dev` 开始新需求：
+在 Claude Code 中用 `/dev` 开始新需求。推荐写法是：
 
 ```text
-/dev 新需求：实现 xxx。写完后生成 handoff，自动 commit，并自动触发 Codex Review。不要 push，不要 finish-work。
+/dev 新需求：实现 xxx
 ```
+
+`新需求：` 前缀有助于表达清楚，但不是必需的；只要 `/dev` 后面是明确的实现需求，就会触发默认交付流程。例如：
+
+```text
+/dev 实现 xxx
+/dev 帮我实现 xxx，并更新相关测试
+```
+
+默认交付流程已经写入 `/dev` 命令模板：实现后必须生成 handoff、自动本地 commit、自动触发 Codex Review，并且不要 push、不要 finish-work。
 
 Claude Code 应该：
 
@@ -98,8 +107,8 @@ Claude Code 应该：
 4. 写入 `.claude/commands/dev.md` 中定义的 Delivery Gate。
 5. 实现任务。
 6. 根据安装的 handoff 模板生成 `.trellis/tasks/<task>/reviews/codex-handoff.md`。
-7. 在用户要求时进行本地 commit。
-8. 运行本地 Codex Review。
+7. 自动进行本地 commit。
+8. 自动运行本地 Codex Review。
 9. 默认只修复 P0/P1 问题。
 10. 如有修复，运行 Codex Re-Review。
 11. 在没有明确授权前，停止于 push、merge、rebase 或 finish-work 之前。
