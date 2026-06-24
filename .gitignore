@@ -10,5 +10,6 @@ npm-debug.log*
 .codex/
 .agents/
 .trellis/
+/docs
 
 # Keep package templates under templates/
