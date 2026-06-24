@@ -4,7 +4,7 @@
   "description": "Install local Trellis + Claude Code + Codex Review workflow files",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Apparux/trellis-codex-review-kit"
+    "url": "git+https://github.com/Apparux/trellis-codex-review-kit.git"
   },
   "type": "module",
   "bin": {
