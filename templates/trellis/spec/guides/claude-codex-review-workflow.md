@@ -7,18 +7,24 @@
 - Codex must not modify business code, commit, push, merge, or rebase.
 - Claude Code may fix issues after Codex Review, but fixes must stay inside the current Trellis task scope.
 
-## Implementation Definition of Done
+## Applicability
 
-Implementation is not done until all of these are true:
+This Codex Review gate applies only when work is started through the installed `/dev` command or when the user explicitly asks to use Codex Review.
+
+For ordinary requests that do not use `/dev`—for example a small bug fix, typo fix, or scoped local edit—follow the normal project workflow. Do not auto-generate a Codex handoff, auto-commit, or run Codex Review unless the user explicitly asks for that gate.
+
+## Codex-Gated Implementation Definition of Done
+
+For `/dev` requests or explicit Codex-gated work, implementation is not done until all of these are true:
 
 1. The active Trellis task has PRD/design/implementation artifacts as required by the project workflow.
 2. Claude Code has implemented the requested change.
 3. Local validation requested by the task has been run where possible.
 4. A Codex handoff has been created at `.trellis/tasks/<task>/reviews/codex-handoff.md`.
 5. The implementation has been committed locally when the user requested an automatic local commit.
-6. Codex Review has run through `.trellis/scripts/codex-review.sh`.
+6. Codex Review has run through the installed OS-native script: `.trellis/scripts/codex-review.sh` on macOS/Linux or `.trellis/scripts/codex-review.ps1` on Windows.
 7. Claude Code has fixed P0/P1 issues by default.
-8. Codex Re-Review has passed through `.trellis/scripts/codex-rereview.sh` when fixes were needed.
+8. Codex Re-Review has passed through the installed OS-native script: `.trellis/scripts/codex-rereview.sh` on macOS/Linux or `.trellis/scripts/codex-rereview.ps1` on Windows when fixes were needed.
 
 ## Handoff Template Rule
 
@@ -52,10 +58,18 @@ When the user asks Claude Code to automatically commit after implementation:
 
 ## Local Automated Codex Review Rule
 
-After the implementation commit and handoff are ready, run:
+For `/dev` requests or explicit Codex-gated work, after the implementation commit and handoff are ready, run the script installed for the current OS.
+
+macOS/Linux:
 
 ```bash
 .trellis/scripts/codex-review.sh .trellis/tasks/<active-task>
+```
+
+Windows PowerShell:
+
+```powershell
+.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<active-task>
 ```
 
 Expected output:
@@ -77,10 +91,18 @@ If Codex reports P0 or P1 issues:
    .trellis/tasks/<active-task>/reviews/claude-fix-notes.md
    ```
 
-3. Run:
+3. Run the script installed for the current OS.
+
+   macOS/Linux:
 
    ```bash
    .trellis/scripts/codex-rereview.sh .trellis/tasks/<active-task>
+   ```
+
+   Windows PowerShell:
+
+   ```powershell
+   .\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<active-task>
    ```
 
 Expected output:
@@ -160,7 +182,7 @@ After fixing, write `.trellis/tasks/<active-task>/reviews/claude-fix-notes.md` w
 
 ## Finish Rule
 
-Do not run `/trellis:finish-work` until Codex Review passes or the user explicitly overrides the gate.
+For `/dev` requests or explicit Codex-gated work, do not run `/trellis:finish-work` until Codex Review passes or the user explicitly overrides the gate.
 
 Passing means:
 

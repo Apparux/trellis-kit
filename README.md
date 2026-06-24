@@ -10,15 +10,19 @@ This kit is local-only. It does not create GitHub Actions, does not push, does n
 
 ## What It Installs
 
-Running `trellis-codex-review-kit init` installs:
+Running `trellis-codex-review-kit init` installs the Markdown templates on every platform and installs review scripts for the host OS:
 
 ```text
 .trellis/spec/guides/claude-codex-review-workflow.md
 .trellis/spec/templates/codex-handoff-template.md
-.trellis/scripts/codex-review.sh
-.trellis/scripts/codex-rereview.sh
+.trellis/scripts/codex-review.sh          # macOS/Linux
+.trellis/scripts/codex-rereview.sh        # macOS/Linux
+.trellis/scripts/codex-review.ps1         # Windows
+.trellis/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
 ```
+
+On non-Windows hosts, `init` installs the Bash `.sh` scripts. On Windows hosts, it installs the native PowerShell `.ps1` scripts instead.
 
 The installed files should be committed into the target project so the workflow is stable, reviewable, and editable by the team.
 
@@ -29,9 +33,8 @@ The installed files should be committed into the target project so the workflow 
 - Trellis
 - Claude Code
 - Codex CLI available as `codex`
-- macOS, Linux, or WSL for the installed `.sh` review scripts
-
-Windows native PowerShell scripts are out of scope for this first version.
+- macOS/Linux for the installed Bash `.sh` review scripts
+- Windows PowerShell 5.1+ or PowerShell 7+ for the installed `.ps1` review scripts
 
 ## Install Package
 
@@ -99,7 +102,9 @@ The `新需求：` prefix is useful for clarity, but it is not required. Any exp
 
 The default delivery flow is built into the `/dev` command template: after implementation, generate the handoff, commit locally, run local Codex Review, and stop before push or finish-work.
 
-Claude Code should:
+If you do not use `/dev`, this kit does not require the Codex Review gate. For a small bug fix or scoped local edit, use your normal project workflow unless you explicitly ask Claude Code to run Codex Review.
+
+Claude Code should, for `/dev` requests:
 
 1. Read `.trellis/workflow.md` and relevant `.trellis/spec/` files.
 2. Create or confirm a Trellis task.
@@ -121,7 +126,7 @@ Continue interrupted work with:
 
 ## Worktree Workflow
 
-Recommended task-branch or worktree flow:
+For `/dev` requests or explicit Codex-gated work, the recommended task-branch or worktree flow is:
 
 1. Work in the task branch/worktree.
 2. Commit implementation to the current worktree branch.
@@ -130,14 +135,26 @@ Recommended task-branch or worktree flow:
 5. Run Codex Re-Review.
 6. Merge back only after Codex Review passes and the user explicitly authorizes the merge.
 
-Do not auto-merge before Codex Review passes. Do not auto-resolve conflicts.
+For non-`/dev` work that does not explicitly enable the Codex gate, use the normal project worktree flow. Do not auto-generate a handoff, auto-commit, or run Codex Review.
+
+Do not auto-merge or auto-resolve conflicts in any workflow.
 
 ## Scripts
 
+`init` installs OS-native review scripts. Use the command that matches the files installed in your project.
+
 ### Initial Review
+
+macOS/Linux:
 
 ```bash
 .trellis/scripts/codex-review.sh .trellis/tasks/<task>
+```
+
+Windows PowerShell:
+
+```powershell
+.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<task>
 ```
 
 Required before running:
@@ -154,8 +171,16 @@ Output:
 
 ### Re-Review
 
+macOS/Linux:
+
 ```bash
 .trellis/scripts/codex-rereview.sh .trellis/tasks/<task>
+```
+
+Windows PowerShell:
+
+```powershell
+.\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<task>
 ```
 
 Required before running:
@@ -189,8 +214,8 @@ The installed workflow tells Claude Code and Codex:
 - Claude Code implements and fixes.
 - Codex reviews only.
 - Codex must not modify business code.
-- Claude Code fixes P0/P1 issues by default.
-- `/trellis:finish-work` must wait until Codex Review passes or the user explicitly overrides the gate.
+- Claude Code fixes P0/P1 issues by default when the Codex Review gate is active.
+- For `/dev` requests or explicit Codex-gated work, `/trellis:finish-work` must wait until Codex Review passes or the user explicitly overrides the gate.
 
 ## Updating Installed Files
 
@@ -254,12 +279,14 @@ Write the P0/P1 fixes, changed files, and checks run before re-review.
 
 ### Script permission denied
 
-Reinstall or fix permissions:
+On macOS/Linux, reinstall or fix permissions:
 
 ```bash
 trellis-codex-review-kit init --force
 chmod +x .trellis/scripts/codex-review.sh .trellis/scripts/codex-rereview.sh
 ```
+
+On Windows PowerShell, if execution policy blocks local scripts, run from an approved shell or use a policy appropriate for your machine, such as `RemoteSigned`, according to your organization's rules.
 
 ### Not inside git work tree
 
@@ -284,4 +311,8 @@ test -f .trellis/spec/templates/codex-handoff-template.md
 test -x .trellis/scripts/codex-review.sh
 test -x .trellis/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
+
+# On Windows, verify the installed script files instead:
+# Test-Path .trellis/scripts/codex-review.ps1
+# Test-Path .trellis/scripts/codex-rereview.ps1
 ```

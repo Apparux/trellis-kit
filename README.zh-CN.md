@@ -10,15 +10,19 @@
 
 ## 安装内容
 
-运行 `trellis-codex-review-kit init` 会安装：
+运行 `trellis-codex-review-kit init` 会在所有平台安装 Markdown 模板，并按当前宿主 OS 安装 review 脚本：
 
 ```text
 .trellis/spec/guides/claude-codex-review-workflow.md
 .trellis/spec/templates/codex-handoff-template.md
-.trellis/scripts/codex-review.sh
-.trellis/scripts/codex-rereview.sh
+.trellis/scripts/codex-review.sh          # macOS/Linux
+.trellis/scripts/codex-rereview.sh        # macOS/Linux
+.trellis/scripts/codex-review.ps1         # Windows
+.trellis/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
 ```
+
+非 Windows 主机会安装 Bash `.sh` 脚本；Windows 主机会安装原生 PowerShell `.ps1` 脚本。
 
 这些安装后的文件应该提交到目标项目中，这样工作流就能保持稳定、可审查，并且团队可以按需编辑。
 
@@ -29,9 +33,8 @@
 - Trellis
 - Claude Code
 - 可通过 `codex` 命令访问的 Codex CLI
-- macOS、Linux 或 WSL，用于运行安装后的 `.sh` review 脚本
-
-第一版不包含 Windows 原生 PowerShell 脚本。
+- macOS/Linux，用于运行安装后的 Bash `.sh` review 脚本
+- Windows PowerShell 5.1+ 或 PowerShell 7+，用于运行安装后的 `.ps1` review 脚本
 
 ## 安装包
 
@@ -99,7 +102,9 @@ SKIP existing: .claude/commands/dev.md
 
 默认交付流程已经写入 `/dev` 命令模板：实现后必须生成 handoff、自动本地 commit、自动触发 Codex Review，并且不要 push、不要 finish-work。
 
-Claude Code 应该：
+如果你没有使用 `/dev`，这个工具不会要求 Codex Review gate。修小 bug 或做小范围本地改动时，按项目普通流程走即可，除非你明确要求 Claude Code 运行 Codex Review。
+
+对于 `/dev` 请求，Claude Code 应该：
 
 1. 读取 `.trellis/workflow.md` 和相关 `.trellis/spec/` 文件。
 2. 创建或确认 Trellis task。
@@ -121,7 +126,7 @@ Claude Code 应该：
 
 ## Worktree 工作流
 
-推荐的 task 分支或 worktree 流程：
+对于 `/dev` 请求或明确启用 Codex gate 的工作，推荐的 task 分支或 worktree 流程是：
 
 1. 在 task 分支或 worktree 中工作。
 2. 将实现提交到当前 worktree 分支。
@@ -130,14 +135,26 @@ Claude Code 应该：
 5. 运行 Codex Re-Review。
 6. 只有在 Codex Review 通过且用户明确授权后，才 merge 回目标分支。
 
-Codex Review 通过前不要自动 merge。不要自动解决冲突。
+对于未明确启用 Codex gate 的非 `/dev` 工作，使用项目普通 worktree 流程。不要自动生成 handoff、自动 commit 或运行 Codex Review。
+
+任何工作流都不要自动 merge，也不要自动解决冲突。
 
 ## 脚本
 
+`init` 会安装 OS 原生 review 脚本。请使用项目中实际安装的脚本。
+
 ### 初次 Review
+
+macOS/Linux：
 
 ```bash
 .trellis/scripts/codex-review.sh .trellis/tasks/<task>
+```
+
+Windows PowerShell：
+
+```powershell
+.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<task>
 ```
 
 运行前需要：
@@ -154,8 +171,16 @@ Codex Review 通过前不要自动 merge。不要自动解决冲突。
 
 ### Re-Review
 
+macOS/Linux：
+
 ```bash
 .trellis/scripts/codex-rereview.sh .trellis/tasks/<task>
+```
+
+Windows PowerShell：
+
+```powershell
+.\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<task>
 ```
 
 运行前需要：
@@ -189,8 +214,8 @@ Codex Review 通过前不要自动 merge。不要自动解决冲突。
 - Claude Code 负责实现和修复。
 - Codex 只负责 review。
 - Codex 不能修改业务代码。
-- Claude Code 默认只修复 P0/P1 问题。
-- `/trellis:finish-work` 必须等 Codex Review 通过，或者用户明确覆盖这个 gate。
+- Codex Review gate 生效时，Claude Code 默认只修复 P0/P1 问题。
+- 对于 `/dev` 请求或明确启用 Codex gate 的工作，`/trellis:finish-work` 必须等 Codex Review 通过，或者用户明确覆盖这个 gate。
 
 ## 更新已安装文件
 
@@ -254,12 +279,14 @@ trellis init -u amin --claude --codex
 
 ### 脚本 permission denied
 
-重新安装或修复权限：
+在 macOS/Linux 上，重新安装或修复权限：
 
 ```bash
 trellis-codex-review-kit init --force
 chmod +x .trellis/scripts/codex-review.sh .trellis/scripts/codex-rereview.sh
 ```
+
+在 Windows PowerShell 上，如果执行策略阻止本地脚本，请使用组织允许的 shell 或按组织规则配置适合本机的执行策略，例如 `RemoteSigned`。
 
 ### 不在 git work tree 内
 
@@ -284,4 +311,8 @@ test -f .trellis/spec/templates/codex-handoff-template.md
 test -x .trellis/scripts/codex-review.sh
 test -x .trellis/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
+
+# Windows 上改为验证安装的 .ps1 文件：
+# Test-Path .trellis/scripts/codex-review.ps1
+# Test-Path .trellis/scripts/codex-rereview.ps1
 ```

@@ -10,6 +10,10 @@ const __dirname = path.dirname(__filename);
 const pkgRoot = path.resolve(__dirname, "..");
 const packageJsonPath = path.join(pkgRoot, "package.json");
 
+const isWindows = process.platform === "win32";
+const scriptExtension = isWindows ? "ps1" : "sh";
+const scriptExecutable = !isWindows;
+
 const templateFiles = [
   {
     from: "templates/trellis/spec/guides/claude-codex-review-workflow.md",
@@ -20,14 +24,14 @@ const templateFiles = [
     to: ".trellis/spec/templates/codex-handoff-template.md",
   },
   {
-    from: "templates/trellis/scripts/codex-review.sh",
-    to: ".trellis/scripts/codex-review.sh",
-    executable: true,
+    from: `templates/trellis/scripts/codex-review.${scriptExtension}`,
+    to: `.trellis/scripts/codex-review.${scriptExtension}`,
+    executable: scriptExecutable,
   },
   {
-    from: "templates/trellis/scripts/codex-rereview.sh",
-    to: ".trellis/scripts/codex-rereview.sh",
-    executable: true,
+    from: `templates/trellis/scripts/codex-rereview.${scriptExtension}`,
+    to: `.trellis/scripts/codex-rereview.${scriptExtension}`,
+    executable: scriptExecutable,
   },
   {
     from: "templates/claude/commands/dev.md",
@@ -54,6 +58,8 @@ Usage:
 
 Commands:
   init          Install Trellis + Claude Code + Codex Review workflow files.
+                Installs Bash .sh review scripts on macOS/Linux and native
+                PowerShell .ps1 review scripts on Windows.
 
 Options:
   --force       Overwrite existing installed files.

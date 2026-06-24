@@ -44,9 +44,9 @@ Write this Delivery Gate into the current task PRD or implementation plan:
 
 - Claude Code must generate `.trellis/tasks/<task>/reviews/codex-handoff.md` from `.trellis/spec/templates/codex-handoff-template.md` after every `/dev` implementation request.
 - Claude Code must commit the implementation locally before running Codex Review.
-- Claude Code must run `.trellis/scripts/codex-review.sh .trellis/tasks/<task>` after the implementation commit for every `/dev` implementation request.
+- Claude Code must run the installed OS-native review script after the implementation commit for every `/dev` implementation request: `.trellis/scripts/codex-review.sh .trellis/tasks/<task>` on macOS/Linux or `.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<task>` on Windows PowerShell.
 - Claude Code must fix P0/P1 issues by default and write `.trellis/tasks/<task>/reviews/claude-fix-notes.md`.
-- Claude Code must run `.trellis/scripts/codex-rereview.sh .trellis/tasks/<task>` after P0/P1 fixes.
+- Claude Code must run the installed OS-native re-review script after P0/P1 fixes: `.trellis/scripts/codex-rereview.sh .trellis/tasks/<task>` on macOS/Linux or `.\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<task>` on Windows PowerShell.
 - Claude Code must not run `/trellis:finish-work` until Codex Review passes or the user explicitly overrides the gate.
 - Claude Code must not push, merge, or rebase without explicit user authorization.
 ```
@@ -60,9 +60,9 @@ Implementation cannot skip handoff, local commit, or Codex Review for `/dev` imp
 3. Run local validation.
 4. Generate `reviews/codex-handoff.md`.
 5. Commit locally.
-6. Run `.trellis/scripts/codex-review.sh .trellis/tasks/<task>`.
+6. Run the installed OS-native review script (`.trellis/scripts/codex-review.sh .trellis/tasks/<task>` on macOS/Linux or `.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<task>` on Windows PowerShell).
 7. Fix only P0/P1 issues by default.
-8. Run `.trellis/scripts/codex-rereview.sh .trellis/tasks/<task>` when fixes were made.
+8. Run the installed OS-native re-review script (`.trellis/scripts/codex-rereview.sh .trellis/tasks/<task>` on macOS/Linux or `.\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<task>` on Windows PowerShell) when fixes were made.
 9. Stop before push, merge, rebase, or `/trellis:finish-work` unless explicitly authorized.
 
 ## Continue Rule
