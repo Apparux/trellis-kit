@@ -4,7 +4,7 @@
   "description": "Install local Trellis + Claude Code + Codex Review workflow files",
   "type": "module",
   "bin": {
-    "trellis-codex-review-kit": "./bin/trellis-codex-review-kit.js"
+    "trellis-codex-review-kit": "bin/trellis-codex-review-kit.js"
   },
   "files": [
     "bin",
