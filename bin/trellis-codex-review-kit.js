@@ -82,10 +82,10 @@ function parseArgs(args) {
   }
 
   if (args.includes("--help")) {
-    if (args.length > 1 && args[0] !== "init") {
-      return { error: `unknown command or option combination: ${args.join(" ")}` };
+    if (args.length === 1 || (args[0] === "init" && args.length === 2)) {
+      return { command: "help" };
     }
-    return { command: "help" };
+    return { error: `unknown command or option combination: ${args.join(" ")}` };
   }
 
   if (args.includes("--version")) {

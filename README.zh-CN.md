@@ -87,10 +87,10 @@ SKIP existing: .claude/commands/dev.md
 在 Claude Code 中用 `/dev` 开始新需求。推荐写法是：
 
 ```text
-/dev 新需求：实现 xxx
+/dev 新需求：实现 xxx。写完后生成 handoff，自动 commit，并自动触发 Codex Review。不要 push，不要 finish-work。
 ```
 
-`新需求：` 前缀有助于表达清楚，但不是必需的；只要 `/dev` 后面是明确的实现需求，就会触发默认交付流程。例如：
+`新需求：` 前缀有助于表达清楚，但不是必需的；只要 `/dev` 后面是明确的实现需求，就会触发默认交付流程。更短示例：
 
 ```text
 /dev 实现 xxx

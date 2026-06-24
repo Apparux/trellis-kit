@@ -87,10 +87,10 @@ SKIP existing: .claude/commands/dev.md
 Start new work in Claude Code with `/dev`. Recommended form:
 
 ```text
-/dev 新需求：实现 xxx
+/dev 新需求：实现 xxx。写完后生成 handoff，自动 commit，并自动触发 Codex Review。不要 push，不要 finish-work。
 ```
 
-The `新需求：` prefix is useful for clarity, but it is not required. Any explicit implementation request after `/dev` triggers the default delivery flow. Examples:
+The `新需求：` prefix is useful for clarity, but it is not required. Any explicit implementation request after `/dev` triggers the default delivery flow. Shorter examples:
 
 ```text
 /dev 实现 xxx
