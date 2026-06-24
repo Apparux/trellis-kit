@@ -1,0 +1,14 @@
+node_modules/
+.DS_Store
+npm-debug.log*
+
+# Local IDE files
+.idea/
+
+# Local Claude/Codex/Trellis runtime configuration
+.claude/
+.codex/
+.agents/
+.trellis/
+
+# Keep package templates under templates/

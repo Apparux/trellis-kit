@@ -1,0 +1,16 @@
+{
+  "name": "trellis-codex-review-kit",
+  "version": "0.1.0",
+  "description": "Install local Trellis + Claude Code + Codex Review workflow files",
+  "type": "module",
+  "bin": {
+    "trellis-codex-review-kit": "./bin/trellis-codex-review-kit.js"
+  },
+  "files": [
+    "bin",
+    "templates",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "license": "MIT"
+}
