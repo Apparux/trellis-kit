@@ -53,16 +53,20 @@ function printHelp() {
 
 Usage:
   trellis-codex-review-kit init [--force] [--dry-run]
+  trellis-codex-review-kit update [--dry-run]
   trellis-codex-review-kit --help
   trellis-codex-review-kit --version
 
 Commands:
   init          Install Trellis + Claude Code + Codex Review workflow files.
-                Installs Bash .sh review scripts on macOS/Linux and native
-                PowerShell .ps1 review scripts on Windows.
+                Existing files are skipped unless --force is passed.
+  update        Update installed workflow files from this package.
+                Existing files are overwritten by default.
+                Both commands install Bash .sh review scripts on macOS/Linux
+                and native PowerShell .ps1 review scripts on Windows.
 
 Options:
-  --force       Overwrite existing installed files.
+  --force       Overwrite existing files during init. Update overwrites by default.
   --dry-run     Preview actions without writing files or changing permissions.
   --help        Print this help message.
   --version     Print package version.
@@ -88,7 +92,7 @@ function parseArgs(args) {
   }
 
   if (args.includes("--help")) {
-    if (args.length === 1 || (args[0] === "init" && args.length === 2)) {
+    if (args.length === 1 || (["init", "update"].includes(args[0]) && args.length === 2)) {
       return { command: "help" };
     }
     return { error: `unknown command or option combination: ${args.join(" ")}` };
@@ -102,14 +106,16 @@ function parseArgs(args) {
   }
 
   const [command, ...options] = args;
-  if (command !== "init") {
+  if (!["init", "update"].includes(command)) {
     return { error: `unknown command: ${command}` };
   }
 
-  const parsed = { command: "init", force: false, dryRun: false };
+  const parsed = { command, force: command === "update", dryRun: false };
   for (const option of options) {
-    if (option === "--force") {
+    if (option === "--force" && command === "init") {
       parsed.force = true;
+    } else if (option === "--force") {
+      return { error: "--force is not needed with update; update overwrites installed files by default" };
     } else if (option === "--dry-run") {
       parsed.dryRun = true;
     } else {
@@ -172,8 +178,10 @@ function installFile(file, targetRoot, options) {
   }
 }
 
-function printNextSteps(dryRun) {
-  const verb = dryRun ? "Dry run complete for Trellis Codex Review Kit." : "Installed Trellis Codex Review Kit.";
+function printNextSteps(command, dryRun) {
+  const action = command === "update" ? "Updated" : "Installed";
+  const dryAction = command === "update" ? "update" : "install";
+  const verb = dryRun ? `Dry run complete for Trellis Codex Review Kit ${dryAction}.` : `${action} Trellis Codex Review Kit.`;
   console.log(`\n${verb}
 
 Next steps:
@@ -187,11 +195,12 @@ Next steps:
    /trellis:continue`);
 }
 
-function init(options) {
+function installTemplates(command, options) {
   const targetRoot = process.cwd();
 
   console.log("Trellis Codex Review Kit");
-  console.log(`\nTarget: ${targetRoot}\n`);
+  console.log(`\nCommand: ${command}`);
+  console.log(`Target: ${targetRoot}\n`);
 
   warnIfMissing(targetRoot, ".git", "Run inside a git project before using the installed review scripts.");
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
@@ -204,7 +213,7 @@ function init(options) {
     installFile(file, targetRoot, options);
   }
 
-  printNextSteps(options.dryRun);
+  printNextSteps(command, options.dryRun);
 }
 
 try {
@@ -216,8 +225,8 @@ try {
     printHelp();
   } else if (parsed.command === "version") {
     printVersion();
-  } else if (parsed.command === "init") {
-    init(parsed);
+  } else if (["init", "update"].includes(parsed.command)) {
+    installTemplates(parsed.command, parsed);
   }
 } catch (error) {
   console.error(`ERROR: ${error.message}`);

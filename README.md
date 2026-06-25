@@ -79,7 +79,7 @@ Preview without writing:
 trellis-codex-review-kit init --dry-run
 ```
 
-Overwrite previously installed files:
+If you intentionally want to reinstall during init and overwrite existing files:
 
 ```bash
 trellis-codex-review-kit init --force
@@ -91,7 +91,9 @@ Preview overwrite actions without writing:
 trellis-codex-review-kit init --force --dry-run
 ```
 
-By default, existing files are skipped:
+For routine updates to already installed kit files, use `update` instead of `init --force`; see [Updating Installed Files](#updating-installed-files).
+
+By default, `init` skips existing files:
 
 ```text
 SKIP existing: .claude/commands/dev.md
@@ -231,18 +233,18 @@ The installed workflow tells Claude Code and Codex:
 
 ## Updating Installed Files
 
-Run:
+Use `update` when the kit is already installed in a project and you want to refresh the installed templates from the current package version:
 
 ```bash
-trellis-codex-review-kit init --force
+trellis-codex-review-kit update
 ```
 
-This overwrites installed kit files with the packaged templates. Review local customizations before using `--force`.
+`update` overwrites installed kit files with the packaged templates. Review local customizations before running it.
 
 Use dry run first when unsure:
 
 ```bash
-trellis-codex-review-kit init --force --dry-run
+trellis-codex-review-kit update --dry-run
 ```
 
 ## Troubleshooting

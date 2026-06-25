@@ -79,7 +79,7 @@ trellis-codex-review-kit init
 trellis-codex-review-kit init --dry-run
 ```
 
-覆盖已安装文件：
+如果你确实想在 init 时重新安装并覆盖已有文件：
 
 ```bash
 trellis-codex-review-kit init --force
@@ -91,7 +91,9 @@ trellis-codex-review-kit init --force
 trellis-codex-review-kit init --force --dry-run
 ```
 
-默认情况下，已有文件会被跳过：
+如果是日常更新已经安装过的 kit 文件，请使用 `update`，不要再用 `init --force`；见[更新已安装文件](#更新已安装文件)。
+
+默认情况下，`init` 会跳过已有文件：
 
 ```text
 SKIP existing: .claude/commands/dev.md
@@ -231,18 +233,18 @@ Windows PowerShell：
 
 ## 更新已安装文件
 
-运行：
+当项目里已经安装过这个 kit，想把已安装模板更新到当前包版本时，请运行：
 
 ```bash
-trellis-codex-review-kit init --force
+trellis-codex-review-kit update
 ```
 
-这会用包内模板覆盖已安装的 kit 文件。使用 `--force` 前请先检查本地自定义内容。
+`update` 会用包内模板覆盖已安装的 kit 文件。运行前请先检查本地自定义内容。
 
 不确定时先 dry run：
 
 ```bash
-trellis-codex-review-kit init --force --dry-run
+trellis-codex-review-kit update --dry-run
 ```
 
 ## 故障排查
