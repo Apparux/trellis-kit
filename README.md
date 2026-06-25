@@ -218,8 +218,8 @@ The installer does not:
 - Run `trellis init`.
 - Install Trellis, Claude Code, or Codex CLI.
 - Run Codex Review during installation.
-- Delete files.
-- Overwrite files unless `--force` is used.
+- Delete files by default; only `update --prune-old` deletes the four documented legacy review scripts under `.trellis/scripts/`.
+- Overwrite files unless `--force` is used with `init` or `update` is used intentionally.
 - Push, merge, or rebase.
 - Modify remote repositories.
 
@@ -241,10 +241,26 @@ trellis-codex-review-kit update
 
 `update` overwrites installed kit files with the packaged templates. Review local customizations before running it.
 
+If you are migrating from a version that installed review scripts under `.trellis/scripts/`, explicitly prune those old script files after installing the new `.trellis/spec/scripts/` files:
+
+```bash
+trellis-codex-review-kit update --prune-old
+```
+
+`--prune-old` deletes only these legacy files when they exist:
+
+```text
+.trellis/scripts/codex-review.sh
+.trellis/scripts/codex-rereview.sh
+.trellis/scripts/codex-review.ps1
+.trellis/scripts/codex-rereview.ps1
+```
+
 Use dry run first when unsure:
 
 ```bash
 trellis-codex-review-kit update --dry-run
+trellis-codex-review-kit update --dry-run --prune-old
 ```
 
 ## Troubleshooting

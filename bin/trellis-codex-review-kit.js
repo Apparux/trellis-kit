@@ -39,6 +39,13 @@ const templateFiles = [
   },
 ];
 
+const oldScriptFiles = [
+  ".trellis/scripts/codex-review.sh",
+  ".trellis/scripts/codex-rereview.sh",
+  ".trellis/scripts/codex-review.ps1",
+  ".trellis/scripts/codex-rereview.ps1",
+];
+
 function readPackageJson() {
   try {
     return JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
@@ -53,7 +60,7 @@ function printHelp() {
 
 Usage:
   trellis-codex-review-kit init [--force] [--dry-run]
-  trellis-codex-review-kit update [--dry-run]
+  trellis-codex-review-kit update [--dry-run] [--prune-old]
   trellis-codex-review-kit --help
   trellis-codex-review-kit --version
 
@@ -67,13 +74,15 @@ Commands:
 
 Options:
   --force       Overwrite existing files during init. Update overwrites by default.
+  --prune-old   During update, delete old review scripts from .trellis/scripts/.
   --dry-run     Preview actions without writing files or changing permissions.
   --help        Print this help message.
   --version     Print package version.
 
 Safety:
-  Existing files are skipped by default. This installer does not run Trellis,
-  Claude Code, Codex, git push, git merge, git rebase, or modify .trellis/workflow.md.`);
+  Existing files are skipped by init by default. This installer does not run
+  Trellis, Claude Code, Codex, git push, git merge, git rebase, or modify
+  .trellis/workflow.md. It deletes files only with update --prune-old.`);
 }
 
 function printVersion() {
@@ -110,7 +119,7 @@ function parseArgs(args) {
     return { error: `unknown command: ${command}` };
   }
 
-  const parsed = { command, force: command === "update", dryRun: false };
+  const parsed = { command, force: command === "update", dryRun: false, pruneOld: false };
   for (const option of options) {
     if (option === "--force" && command === "init") {
       parsed.force = true;
@@ -118,6 +127,10 @@ function parseArgs(args) {
       return { error: "--force is not needed with update; update overwrites installed files by default" };
     } else if (option === "--dry-run") {
       parsed.dryRun = true;
+    } else if (option === "--prune-old" && command === "update") {
+      parsed.pruneOld = true;
+    } else if (option === "--prune-old") {
+      return { error: "--prune-old can only be used with update" };
     } else {
       return { error: `unknown option: ${option}` };
     }
@@ -178,6 +191,27 @@ function installFile(file, targetRoot, options) {
   }
 }
 
+function pruneOldScripts(targetRoot, dryRun) {
+  for (const relativePath of oldScriptFiles) {
+    const target = path.join(targetRoot, relativePath);
+    if (!fs.existsSync(target)) {
+      console.log(`${dryRun ? "WOULD SKIP missing" : "SKIP missing"}: ${relativePath}`);
+      continue;
+    }
+
+    const stat = fs.lstatSync(target);
+    if (!stat.isFile() && !stat.isSymbolicLink()) {
+      console.log(`SKIP non-file: ${relativePath}`);
+      continue;
+    }
+
+    console.log(`${dryRun ? "WOULD DELETE" : "DELETE"} ${relativePath}`);
+    if (!dryRun) {
+      fs.unlinkSync(target);
+    }
+  }
+}
+
 function printNextSteps(command, dryRun) {
   const action = command === "update" ? "Updated" : "Installed";
   const dryAction = command === "update" ? "update" : "install";
@@ -206,11 +240,19 @@ function installTemplates(command, options) {
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
   warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /dev command available.");
 
+  if (command === "init" && options.pruneOld) {
+    throw new Error("--prune-old can only be used with update");
+  }
+
   validateTemplateSources();
 
   console.log("");
   for (const file of templateFiles) {
     installFile(file, targetRoot, options);
+  }
+
+  if (command === "update" && options.pruneOld) {
+    pruneOldScripts(targetRoot, options.dryRun);
   }
 
   printNextSteps(command, options.dryRun);

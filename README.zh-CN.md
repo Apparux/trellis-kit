@@ -218,8 +218,8 @@ Windows PowerShell：
 - 运行 `trellis init`。
 - 安装 Trellis、Claude Code 或 Codex CLI。
 - 在安装过程中运行 Codex Review。
-- 删除文件。
-- 在未传入 `--force` 时覆盖文件。
+- 默认删除文件；只有 `update --prune-old` 会删除 `.trellis/scripts/` 下文档列出的四个遗留 review 脚本。
+- 在未传入 `--force` 的 `init` 或未明确运行 `update` 时覆盖文件。
 - push、merge 或 rebase。
 - 修改远端仓库。
 
@@ -241,10 +241,26 @@ trellis-codex-review-kit update
 
 `update` 会用包内模板覆盖已安装的 kit 文件。运行前请先检查本地自定义内容。
 
+如果你正在从旧版本迁移，旧版本曾把 review 脚本安装到 `.trellis/scripts/`，可以显式清理这些旧脚本；新脚本会安装在 `.trellis/spec/scripts/`：
+
+```bash
+trellis-codex-review-kit update --prune-old
+```
+
+`--prune-old` 只会删除下面这些存在的遗留文件：
+
+```text
+.trellis/scripts/codex-review.sh
+.trellis/scripts/codex-rereview.sh
+.trellis/scripts/codex-review.ps1
+.trellis/scripts/codex-rereview.ps1
+```
+
 不确定时先 dry run：
 
 ```bash
 trellis-codex-review-kit update --dry-run
+trellis-codex-review-kit update --dry-run --prune-old
 ```
 
 ## 故障排查
