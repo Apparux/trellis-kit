@@ -15,10 +15,10 @@
 ```text
 .trellis/spec/guides/claude-codex-review-workflow.md
 .trellis/spec/templates/codex-handoff-template.md
-.trellis/scripts/codex-review.sh          # macOS/Linux
-.trellis/scripts/codex-rereview.sh        # macOS/Linux
-.trellis/scripts/codex-review.ps1         # Windows
-.trellis/scripts/codex-rereview.ps1       # Windows
+.trellis/spec/scripts/codex-review.sh          # macOS/Linux
+.trellis/spec/scripts/codex-rereview.sh        # macOS/Linux
+.trellis/spec/scripts/codex-review.ps1         # Windows
+.trellis/spec/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
 ```
 
@@ -162,13 +162,13 @@ SKIP existing: .claude/commands/dev.md
 macOS/Linux：
 
 ```bash
-.trellis/scripts/codex-review.sh .trellis/tasks/<task>
+.trellis/spec/scripts/codex-review.sh .trellis/tasks/<task>
 ```
 
 Windows PowerShell：
 
 ```powershell
-.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<task>
+.\.trellis\spec\scripts\codex-review.ps1 .trellis/tasks/<task>
 ```
 
 运行前需要：
@@ -188,13 +188,13 @@ Windows PowerShell：
 macOS/Linux：
 
 ```bash
-.trellis/scripts/codex-rereview.sh .trellis/tasks/<task>
+.trellis/spec/scripts/codex-rereview.sh .trellis/tasks/<task>
 ```
 
 Windows PowerShell：
 
 ```powershell
-.\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<task>
+.\.trellis\spec\scripts\codex-rereview.ps1 .trellis/tasks/<task>
 ```
 
 运行前需要：
@@ -297,7 +297,7 @@ trellis init -u amin --claude --codex
 
 ```bash
 trellis-codex-review-kit init --force
-chmod +x .trellis/scripts/codex-review.sh .trellis/scripts/codex-rereview.sh
+chmod +x .trellis/spec/scripts/codex-review.sh .trellis/spec/scripts/codex-rereview.sh
 ```
 
 在 Windows PowerShell 上，如果执行策略阻止本地脚本，请使用组织允许的 shell 或按组织规则配置适合本机的执行策略，例如 `RemoteSigned`。
@@ -322,11 +322,11 @@ trellis-codex-review-kit init
 
 test -f .trellis/spec/guides/claude-codex-review-workflow.md
 test -f .trellis/spec/templates/codex-handoff-template.md
-test -x .trellis/scripts/codex-review.sh
-test -x .trellis/scripts/codex-rereview.sh
+test -x .trellis/spec/scripts/codex-review.sh
+test -x .trellis/spec/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
 
 # Windows 上改为验证安装的 .ps1 文件：
-# Test-Path .trellis/scripts/codex-review.ps1
-# Test-Path .trellis/scripts/codex-rereview.ps1
+# Test-Path .trellis/spec/scripts/codex-review.ps1
+# Test-Path .trellis/spec/scripts/codex-rereview.ps1
 ```

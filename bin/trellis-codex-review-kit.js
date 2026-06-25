@@ -25,12 +25,12 @@ const templateFiles = [
   },
   {
     from: `templates/trellis/scripts/codex-review.${scriptExtension}`,
-    to: `.trellis/scripts/codex-review.${scriptExtension}`,
+    to: `.trellis/spec/scripts/codex-review.${scriptExtension}`,
     executable: scriptExecutable,
   },
   {
     from: `templates/trellis/scripts/codex-rereview.${scriptExtension}`,
-    to: `.trellis/scripts/codex-rereview.${scriptExtension}`,
+    to: `.trellis/spec/scripts/codex-rereview.${scriptExtension}`,
     executable: scriptExecutable,
   },
   {

@@ -15,10 +15,10 @@ Running `trellis-codex-review-kit init` installs the Markdown templates on every
 ```text
 .trellis/spec/guides/claude-codex-review-workflow.md
 .trellis/spec/templates/codex-handoff-template.md
-.trellis/scripts/codex-review.sh          # macOS/Linux
-.trellis/scripts/codex-rereview.sh        # macOS/Linux
-.trellis/scripts/codex-review.ps1         # Windows
-.trellis/scripts/codex-rereview.ps1       # Windows
+.trellis/spec/scripts/codex-review.sh          # macOS/Linux
+.trellis/spec/scripts/codex-rereview.sh        # macOS/Linux
+.trellis/spec/scripts/codex-review.ps1         # Windows
+.trellis/spec/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
 ```
 
@@ -162,13 +162,13 @@ Do not auto-merge or auto-resolve conflicts in any workflow.
 macOS/Linux:
 
 ```bash
-.trellis/scripts/codex-review.sh .trellis/tasks/<task>
+.trellis/spec/scripts/codex-review.sh .trellis/tasks/<task>
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<task>
+.\.trellis\spec\scripts\codex-review.ps1 .trellis/tasks/<task>
 ```
 
 Required before running:
@@ -188,13 +188,13 @@ Output:
 macOS/Linux:
 
 ```bash
-.trellis/scripts/codex-rereview.sh .trellis/tasks/<task>
+.trellis/spec/scripts/codex-rereview.sh .trellis/tasks/<task>
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<task>
+.\.trellis\spec\scripts\codex-rereview.ps1 .trellis/tasks/<task>
 ```
 
 Required before running:
@@ -297,7 +297,7 @@ On macOS/Linux, reinstall or fix permissions:
 
 ```bash
 trellis-codex-review-kit init --force
-chmod +x .trellis/scripts/codex-review.sh .trellis/scripts/codex-rereview.sh
+chmod +x .trellis/spec/scripts/codex-review.sh .trellis/spec/scripts/codex-rereview.sh
 ```
 
 On Windows PowerShell, if execution policy blocks local scripts, run from an approved shell or use a policy appropriate for your machine, such as `RemoteSigned`, according to your organization's rules.
@@ -322,11 +322,11 @@ trellis-codex-review-kit init
 
 test -f .trellis/spec/guides/claude-codex-review-workflow.md
 test -f .trellis/spec/templates/codex-handoff-template.md
-test -x .trellis/scripts/codex-review.sh
-test -x .trellis/scripts/codex-rereview.sh
+test -x .trellis/spec/scripts/codex-review.sh
+test -x .trellis/spec/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
 
 # On Windows, verify the installed script files instead:
-# Test-Path .trellis/scripts/codex-review.ps1
-# Test-Path .trellis/scripts/codex-rereview.ps1
+# Test-Path .trellis/spec/scripts/codex-review.ps1
+# Test-Path .trellis/spec/scripts/codex-rereview.ps1
 ```

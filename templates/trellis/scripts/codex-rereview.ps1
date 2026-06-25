@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Show-Usage {
-  [Console]::Error.WriteLine("Usage: .trellis/scripts/codex-rereview.ps1 .trellis/tasks/<task>")
+  [Console]::Error.WriteLine("Usage: .trellis/spec/scripts/codex-rereview.ps1 .trellis/tasks/<task>")
 }
 
 function Fail {

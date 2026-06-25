@@ -22,9 +22,9 @@ For `/dev` requests or explicit Codex-gated work, implementation is not done unt
 3. Local validation requested by the task has been run where possible.
 4. A Codex handoff has been created at `.trellis/tasks/<task>/reviews/codex-handoff.md`.
 5. The implementation has been committed locally when the user requested an automatic local commit.
-6. Codex Review has run through the installed OS-native script: `.trellis/scripts/codex-review.sh` on macOS/Linux or `.trellis/scripts/codex-review.ps1` on Windows.
+6. Codex Review has run through the installed OS-native script: `.trellis/spec/scripts/codex-review.sh` on macOS/Linux or `.trellis/spec/scripts/codex-review.ps1` on Windows.
 7. Claude Code has fixed P0/P1 issues by default.
-8. Codex Re-Review has passed through the installed OS-native script: `.trellis/scripts/codex-rereview.sh` on macOS/Linux or `.trellis/scripts/codex-rereview.ps1` on Windows when fixes were needed.
+8. Codex Re-Review has passed through the installed OS-native script: `.trellis/spec/scripts/codex-rereview.sh` on macOS/Linux or `.trellis/spec/scripts/codex-rereview.ps1` on Windows when fixes were needed.
 
 ## Handoff Template Rule
 
@@ -63,13 +63,13 @@ For `/dev` requests or explicit Codex-gated work, after the implementation commi
 macOS/Linux:
 
 ```bash
-.trellis/scripts/codex-review.sh .trellis/tasks/<active-task>
+.trellis/spec/scripts/codex-review.sh .trellis/tasks/<active-task>
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\.trellis\scripts\codex-review.ps1 .trellis/tasks/<active-task>
+.\.trellis\spec\scripts\codex-review.ps1 .trellis/tasks/<active-task>
 ```
 
 Expected output:
@@ -96,13 +96,13 @@ If Codex reports P0 or P1 issues:
    macOS/Linux:
 
    ```bash
-   .trellis/scripts/codex-rereview.sh .trellis/tasks/<active-task>
+   .trellis/spec/scripts/codex-rereview.sh .trellis/tasks/<active-task>
    ```
 
    Windows PowerShell:
 
    ```powershell
-   .\.trellis\scripts\codex-rereview.ps1 .trellis/tasks/<active-task>
+   .\.trellis\spec\scripts\codex-rereview.ps1 .trellis/tasks/<active-task>
    ```
 
 Expected output:
