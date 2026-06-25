@@ -20,6 +20,7 @@ Running `trellis-codex-review-kit init` installs the Markdown templates on every
 .trellis/spec/scripts/codex-review.ps1         # Windows
 .trellis/spec/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
+.claude/commands/task.md
 ```
 
 On non-Windows hosts, `init` installs the Bash `.sh` scripts. On Windows hosts, it installs the native PowerShell `.ps1` scripts instead.
@@ -132,11 +133,20 @@ Claude Code should, for `/dev` requests:
 10. Run Codex Re-Review when fixes were made.
 11. Stop before push, merge, rebase, or finish-work unless explicitly authorized.
 
-Continue interrupted work with:
+Continue interrupted work with the current active task:
 
 ```text
 /trellis:continue
 ```
+
+Continue a specific task by id or suffix without retyping the longer prompt:
+
+```text
+/task 06-24-school-operation-log
+/task school-operation-log
+```
+
+`/task` checks the current active task first, then resolves the requested task under `.trellis/tasks/` or `.trellis/tasks/archive/`, switches context when needed, and continues through the Trellis continue flow. It does not create a new task or re-plan unless required artifacts are missing or task state is inconsistent.
 
 ## Worktree Workflow
 
@@ -341,6 +351,7 @@ test -f .trellis/spec/templates/codex-handoff-template.md
 test -x .trellis/spec/scripts/codex-review.sh
 test -x .trellis/spec/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
+test -f .claude/commands/task.md
 
 # On Windows, verify the installed script files instead:
 # Test-Path .trellis/spec/scripts/codex-review.ps1

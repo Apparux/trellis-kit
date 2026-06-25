@@ -37,6 +37,10 @@ const templateFiles = [
     from: "templates/claude/commands/dev.md",
     to: ".claude/commands/dev.md",
   },
+  {
+    from: "templates/claude/commands/task.md",
+    to: ".claude/commands/task.md",
+  },
 ];
 
 const oldScriptFiles = [

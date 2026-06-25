@@ -20,6 +20,7 @@
 .trellis/spec/scripts/codex-review.ps1         # Windows
 .trellis/spec/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
+.claude/commands/task.md
 ```
 
 非 Windows 主机会安装 Bash `.sh` 脚本；Windows 主机会安装原生 PowerShell `.ps1` 脚本。
@@ -132,11 +133,20 @@ SKIP existing: .claude/commands/dev.md
 10. 如有修复，运行 Codex Re-Review。
 11. 在没有明确授权前，停止于 push、merge、rebase 或 finish-work 之前。
 
-中断后继续工作：
+继续当前 active task：
 
 ```text
 /trellis:continue
 ```
+
+按 id 或后缀继续指定 task，不用每次重输长提示：
+
+```text
+/task 06-24-school-operation-log
+/task school-operation-log
+```
+
+`/task` 会先检查当前 active task，再从 `.trellis/tasks/` 或 `.trellis/tasks/archive/` 解析指定任务；需要时切换上下文，然后进入 Trellis continue 流程。它不会创建新任务，也不会默认重新规划，除非缺少必要 artifact 或任务状态不一致。
 
 ## Worktree 工作流
 
@@ -341,6 +351,7 @@ test -f .trellis/spec/templates/codex-handoff-template.md
 test -x .trellis/spec/scripts/codex-review.sh
 test -x .trellis/spec/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
+test -f .claude/commands/task.md
 
 # Windows 上改为验证安装的 .ps1 文件：
 # Test-Path .trellis/spec/scripts/codex-review.ps1
