@@ -38,10 +38,22 @@ The installed files should be committed into the target project so the workflow 
 
 ## Install Package
 
-From this package repository:
+From this package repository (local development install):
 
 ```bash
 npm install -g .
+```
+
+From npm (remote install):
+
+```bash
+npm install -g trellis-codex-review-kit
+```
+
+If you do not want a global install, you can also run the published CLI through `npx`:
+
+```bash
+npx trellis-codex-review-kit init
 ```
 
 Verify:
@@ -141,7 +153,7 @@ Do not auto-merge or auto-resolve conflicts in any workflow.
 
 ## Scripts
 
-`init` installs OS-native review scripts. Use the command that matches the files installed in your project.
+`init` installs OS-native review scripts. These commands are the review gate used by `/dev`. Claude Code normally invokes them automatically after implementation when `/dev` or an explicit Codex gate is in effect. You can also run them manually when you want to inspect or debug a task outside `/dev`.
 
 ### Initial Review
 

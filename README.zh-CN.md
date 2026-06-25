@@ -38,10 +38,22 @@
 
 ## 安装包
 
-在本包仓库中运行：
+在本包仓库中运行（本地开发安装）：
 
 ```bash
 npm install -g .
+```
+
+从 npm 安装（远程安装）：
+
+```bash
+npm install -g trellis-codex-review-kit
+```
+
+如果你不想全局安装，也可以通过 `npx` 直接运行已发布的 CLI：
+
+```bash
+npx trellis-codex-review-kit init
 ```
 
 验证：
@@ -141,7 +153,7 @@ SKIP existing: .claude/commands/dev.md
 
 ## 脚本
 
-`init` 会安装 OS 原生 review 脚本。请使用项目中实际安装的脚本。
+`init` 会安装 OS 原生 review 脚本。这些脚本是 `/dev` 的 review gate。Claude Code 在 `/dev` 或明确启用 Codex gate 的工作中，通常会在实现后自动调用它们。你也可以在排查或手动 review 时自己运行。
 
 ### 初次 Review
 
