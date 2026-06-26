@@ -13,3 +13,6 @@ npm-debug.log*
 /docs
 
 # Keep package templates under templates/
+
+# Worktree isolation
+.worktrees/

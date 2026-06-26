@@ -1,8 +1,8 @@
 # trellis-codex-review-kit
 
-`trellis-codex-review-kit` installs local Trellis + Claude Code + Codex Review workflow files into a project.
+`trellis-codex-review-kit` installs local Trellis + Claude Code workflow files into a project.
 
-It is a small Node.js CLI package with no runtime dependencies. It does not replace Trellis, Claude Code, or Codex CLI. It only copies versionable project files so Claude Code can implement work and Codex CLI can review the local git diff in a repeatable way.
+It is a small Node.js CLI package with no runtime dependencies. It does not replace Trellis, Claude Code, or Codex CLI. It only copies versionable project files so Claude Code can implement work following the Trellis workflow, with optional Review Handoff for manual external review.
 
 This kit is local-only. It does not create GitHub Actions, does not push, does not merge, and does not run Codex Review during installation.
 
@@ -13,14 +13,17 @@ This kit is local-only. It does not create GitHub Actions, does not push, does n
 Running `trellis-codex-review-kit init` installs the Markdown templates on every platform and installs review scripts for the host OS:
 
 ```text
-.trellis/spec/guides/claude-codex-review-workflow.md
-.trellis/spec/templates/codex-handoff-template.md
+.trellis/spec/guides/review-handoff-workflow.md
+.trellis/spec/templates/review-handoff-template.md
+.trellis/spec/guides/development-location-decision.md
+.trellis/spec/guides/fast-path-change-policy.md
 .trellis/spec/scripts/codex-review.sh          # macOS/Linux
 .trellis/spec/scripts/codex-rereview.sh        # macOS/Linux
 .trellis/spec/scripts/codex-review.ps1         # Windows
 .trellis/spec/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
 .claude/commands/task.md
+.claude/commands/fix.md
 ```
 
 On non-Windows hosts, `init` installs the Bash `.sh` scripts. On Windows hosts, it installs the native PowerShell `.ps1` scripts instead.
@@ -33,7 +36,7 @@ The installed files should be committed into the target project so the workflow 
 - git
 - Trellis
 - Claude Code
-- Codex CLI available as `codex`
+- Codex CLI available as `codex` (optional; only needed if the user chooses to run Codex Review manually)
 - macOS/Linux for the installed Bash `.sh` review scripts
 - Windows PowerShell 5.1+ or PowerShell 7+ for the installed `.ps1` review scripts
 
@@ -102,72 +105,125 @@ SKIP existing: .claude/commands/dev.md
 
 ## Daily Workflow
 
-Start new work in Claude Code with `/dev`. Recommended form:
+### `/dev` — Full Trellis Workflow
+
+`/dev` runs the full Trellis workflow. Before implementation, it asks whether to develop in the current working tree or in a task-specific worktree under `.worktrees/<task-id>`. After implementation, it follows the native Trellis check flow. Then it asks whether to generate a Review Handoff Markdown file for optional manual external review. It does not automatically run Codex Review, Claude Review, or any reviewer.
+
+Start new feature work in Claude Code:
 
 ```text
-/dev 新需求：实现 xxx。写完后生成 handoff，自动 commit，并自动触发 Codex Review。不要 push，不要 finish-work。
-```
-
-The `新需求：` prefix is useful for clarity, but it is not required. Any explicit implementation request after `/dev` triggers the default delivery flow. Shorter examples:
-
-```text
+/dev 新需求：实现 xxx
 /dev 实现 xxx
 /dev 帮我实现 xxx，并更新相关测试
 ```
 
-The default delivery flow is built into the `/dev` command template: after implementation, generate the handoff, commit locally, run local Codex Review, and stop before push or finish-work.
-
-If you do not use `/dev`, this kit does not require the Codex Review gate. For a small bug fix or scoped local edit, use your normal project workflow unless you explicitly ask Claude Code to run Codex Review.
-
-Claude Code should, for `/dev` requests:
+For `/dev` requests, Claude Code should:
 
 1. Read `.trellis/workflow.md` and relevant `.trellis/spec/` files.
-2. Create or confirm a Trellis task.
-3. Write the task PRD/design/implementation artifacts required by Trellis.
-4. Add the Delivery Gate from `.claude/commands/dev.md`.
-5. Implement the task.
-6. Generate `.trellis/tasks/<task>/reviews/codex-handoff.md` from the installed handoff template.
-7. Commit locally automatically.
-8. Run local Codex Review automatically.
-9. Fix P0/P1 issues by default.
-10. Run Codex Re-Review when fixes were made.
-11. Stop before push, merge, rebase, or finish-work unless explicitly authorized.
+2. Check whether the request qualifies for Fast Path; if so, suggest `/fix` instead.
+3. Create or confirm a Trellis task.
+4. Write the task PRD/design/implementation artifacts required by Trellis.
+5. Ask the user to choose development location: current workspace or `.worktrees/<task-id>`.
+6. Implement the task.
+7. Run Trellis native check.
+8. Ask whether to generate Review Handoff Markdown.
+9. Stop — the user decides whether to review, commit, push, or finish-work.
 
-Continue interrupted work with the current active task:
+### `/fix` — Fast Path Fix
+
+`/fix` is for small bug fixes, small adjustments, and low-risk patches. It does not create a full Trellis task, does not create PRD/DESIGN/TASK documents, does not generate a Review Handoff by default, does not commit, and does not run review by default.
 
 ```text
-/trellis:continue
+/fix 修复学生档案导出时手机号为空导致 NPE 的问题
+/fix 学生档案列表里班级名称字段现在返回 classId，改成返回 className
 ```
 
-Continue a specific task by id or suffix without retyping the longer prompt:
+### `/task` — Continue Existing Task
+
+Continue a specific existing Trellis task by directory name or suffix:
 
 ```text
 /task 06-24-school-operation-log
 /task school-operation-log
 ```
 
-`/task` checks the current active task first, then resolves the requested task under `.trellis/tasks/` or `.trellis/tasks/archive/`, switches context when needed, and continues through the Trellis continue flow. It does not create a new task or re-plan unless required artifacts are missing or task state is inconsistent.
+### `/trellis:continue` — Continue Interrupted Work
 
-## Worktree Workflow
+Continue work with the current active task:
 
-For `/dev` requests or explicit Codex-gated work, the recommended task-branch or worktree flow is:
+```text
+/trellis:continue
+```
 
-1. Work in the task branch/worktree.
-2. Commit implementation to the current worktree branch.
-3. Run Codex Review from the same worktree.
-4. Fix P0/P1 findings only by default.
-5. Run Codex Re-Review.
-6. Merge back only after Codex Review passes and the user explicitly authorizes the merge.
+## Development Location
 
-For non-`/dev` work that does not explicitly enable the Codex gate, use the normal project worktree flow. Do not auto-generate a handoff, auto-commit, or run Codex Review.
+Before implementation for a full `/dev` task, the user chooses:
 
-Do not auto-merge or auto-resolve conflicts in any workflow.
+1. Current branch / current working tree
+2. Task-specific git worktree
 
-## Scripts
+If a worktree is chosen, the fixed path is:
 
-`init` installs OS-native review scripts. These commands are the review gate used by `/dev`. Claude Code normally invokes them automatically after implementation when `/dev` or an explicit Codex gate is in effect. You can also run them manually when you want to inspect or debug a task outside `/dev`.
+```text
+.worktrees/<task-id>
+```
 
-### Initial Review
+The fixed branch name is:
+
+```text
+task/<task-id>
+```
+
+Example:
+
+```text
+.worktrees/06-23-customer-safety-education
+task/06-23-customer-safety-education
+```
+
+The agent shows status and provides a recommendation, but the user makes the final decision.
+
+Worktrees must not be created in:
+
+```text
+.trellis/worktrees/
+../<repo>-worktrees/
+../<repo>-<task-id>
+/tmp/
+```
+
+It is recommended that the target project `.gitignore` includes:
+
+```gitignore
+.worktrees/
+```
+
+## Review Handoff
+
+Review Handoff Markdown is an optional handoff document for manual external review. It is not a replacement for Trellis native check.
+
+Generating a Review Handoff does not imply automatic review.
+
+The user may choose to:
+
+* Skip and only receive an implementation summary
+* Generate and review personally
+* Generate and hand off to Codex
+* Generate and hand off to Claude
+* Generate and hand off to a human reviewer
+* Generate and use other tools
+* Generate later
+
+## Review Scripts
+
+The installed Codex Review scripts are optional manual tools:
+
+* Not automatically executed by `/dev` or `/fix`
+* Users run them manually when they choose
+* Not described as a mandatory Delivery Gate
+* Not described as the default workflow
+
+### Initial Review (manual)
 
 macOS/Linux:
 
@@ -181,19 +237,7 @@ Windows PowerShell:
 .\.trellis\spec\scripts\codex-review.ps1 .trellis/tasks/<task>
 ```
 
-Required before running:
-
-```text
-.trellis/tasks/<task>/reviews/codex-handoff.md
-```
-
-Output:
-
-```text
-.trellis/tasks/<task>/reviews/codex-review-1.md
-```
-
-### Re-Review
+### Re-Review (manual)
 
 macOS/Linux:
 
@@ -205,19 +249,6 @@ Windows PowerShell:
 
 ```powershell
 .\.trellis\spec\scripts\codex-rereview.ps1 .trellis/tasks/<task>
-```
-
-Required before running:
-
-```text
-.trellis/tasks/<task>/reviews/codex-review-1.md
-.trellis/tasks/<task>/reviews/claude-fix-notes.md
-```
-
-Output:
-
-```text
-.trellis/tasks/<task>/reviews/codex-review-2.md
 ```
 
 ## Safety Rules
@@ -232,14 +263,16 @@ The installer does not:
 - Overwrite files unless `--force` is used with `init` or `update` is used intentionally.
 - Push, merge, or rebase.
 - Modify remote repositories.
+- Create `.worktrees/` directory.
+- Modify target project `.gitignore`.
 
-The installed workflow tells Claude Code and Codex:
+The installed workflow tells Claude Code:
 
 - Claude Code implements and fixes.
-- Codex reviews only.
-- Codex must not modify business code.
-- Claude Code fixes P0/P1 issues by default when the Codex Review gate is active.
-- For `/dev` requests or explicit Codex-gated work, `/trellis:finish-work` must wait until Codex Review passes or the user explicitly overrides the gate.
+- Trellis native check is the default verification.
+- Review Handoff is optional and user-controlled.
+- External review is user-controlled.
+- The user decides whether to commit, push, merge, or finish-work.
 
 ## Updating Installed Files
 
@@ -273,6 +306,23 @@ trellis-codex-review-kit update --dry-run
 trellis-codex-review-kit update --dry-run --prune-old
 ```
 
+## Migration Notes
+
+### File Renames (v0.5.0)
+
+The following template files were renamed:
+
+| Old Name | New Name |
+|----------|----------|
+| `.trellis/spec/guides/claude-codex-review-workflow.md` | `.trellis/spec/guides/review-handoff-workflow.md` |
+| `.trellis/spec/templates/codex-handoff-template.md` | `.trellis/spec/templates/review-handoff-template.md` |
+
+Projects installed with older kit versions may still have the old files. After upgrading, confirm no local customizations exist in the old files, then manually delete them to avoid conflicts with the new Review Handoff Workflow.
+
+### Worktree Path Change
+
+Older versions may have recommended worktree paths such as `../<repo>-worktrees/<task-id>`, `../<repo>-<task-id>`, or `.trellis/worktrees/<task-id>`. The current version uses only `.worktrees/<task-id>`.
+
 ## Troubleshooting
 
 ### `codex: command not found`
@@ -292,30 +342,6 @@ trellis init -u amin --claude --codex
 ```
 
 The installer warns about missing `.trellis`, but it does not fail because some users may prepare directories manually.
-
-### Missing handoff
-
-`codex-review.sh` requires:
-
-```text
-.trellis/tasks/<task>/reviews/codex-handoff.md
-```
-
-Create it from:
-
-```text
-.trellis/spec/templates/codex-handoff-template.md
-```
-
-### Missing fix notes
-
-`codex-rereview.sh` requires:
-
-```text
-.trellis/tasks/<task>/reviews/claude-fix-notes.md
-```
-
-Write the P0/P1 fixes, changed files, and checks run before re-review.
 
 ### Script permission denied
 
@@ -346,12 +372,15 @@ git init
 mkdir -p .trellis .claude
 trellis-codex-review-kit init
 
-test -f .trellis/spec/guides/claude-codex-review-workflow.md
-test -f .trellis/spec/templates/codex-handoff-template.md
+test -f .trellis/spec/guides/review-handoff-workflow.md
+test -f .trellis/spec/templates/review-handoff-template.md
+test -f .trellis/spec/guides/development-location-decision.md
+test -f .trellis/spec/guides/fast-path-change-policy.md
 test -x .trellis/spec/scripts/codex-review.sh
 test -x .trellis/spec/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
 test -f .claude/commands/task.md
+test -f .claude/commands/fix.md
 
 # On Windows, verify the installed script files instead:
 # Test-Path .trellis/spec/scripts/codex-review.ps1

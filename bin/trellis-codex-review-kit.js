@@ -16,12 +16,20 @@ const scriptExecutable = !isWindows;
 
 const templateFiles = [
   {
-    from: "templates/trellis/spec/guides/claude-codex-review-workflow.md",
-    to: ".trellis/spec/guides/claude-codex-review-workflow.md",
+    from: "templates/trellis/spec/guides/review-handoff-workflow.md",
+    to: ".trellis/spec/guides/review-handoff-workflow.md",
   },
   {
-    from: "templates/trellis/spec/templates/codex-handoff-template.md",
-    to: ".trellis/spec/templates/codex-handoff-template.md",
+    from: "templates/trellis/spec/templates/review-handoff-template.md",
+    to: ".trellis/spec/templates/review-handoff-template.md",
+  },
+  {
+    from: "templates/trellis/spec/guides/development-location-decision.md",
+    to: ".trellis/spec/guides/development-location-decision.md",
+  },
+  {
+    from: "templates/trellis/spec/guides/fast-path-change-policy.md",
+    to: ".trellis/spec/guides/fast-path-change-policy.md",
   },
   {
     from: `templates/trellis/scripts/codex-review.${scriptExtension}`,
@@ -40,6 +48,10 @@ const templateFiles = [
   {
     from: "templates/claude/commands/task.md",
     to: ".claude/commands/task.md",
+  },
+  {
+    from: "templates/claude/commands/fix.md",
+    to: ".claude/commands/fix.md",
   },
 ];
 
@@ -69,7 +81,7 @@ Usage:
   trellis-codex-review-kit --version
 
 Commands:
-  init          Install Trellis + Claude Code + Codex Review workflow files.
+  init          Install Trellis + Claude Code workflow files.
                 Existing files are skipped unless --force is passed.
   update        Update installed workflow files from this package.
                 Existing files are overwritten by default.
@@ -223,14 +235,18 @@ function printNextSteps(command, dryRun) {
   console.log(`\n${verb}
 
 Next steps:
-1. Verify Codex CLI:
-   codex --version
+1. Start new feature work in Claude Code:
+   /dev <requirement description>
 
-2. Start new work in Claude Code:
-   /dev 新需求：xxxx。写完后生成 handoff，自动 commit，并自动触发 Codex Review。不要 push，不要 finish-work。
+2. Start a small bug fix or patch in Claude Code:
+   /fix <bug description>
 
 3. Continue interrupted work:
-   /trellis:continue`);
+   /trellis:continue
+
+4. Review scripts are available as optional manual tools:
+   .trellis/spec/scripts/codex-review.sh .trellis/tasks/<task>
+   .trellis/spec/scripts/codex-rereview.sh .trellis/tasks/<task>`);
 }
 
 function installTemplates(command, options) {
@@ -242,7 +258,7 @@ function installTemplates(command, options) {
 
   warnIfMissing(targetRoot, ".git", "Run inside a git project before using the installed review scripts.");
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
-  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /dev command available.");
+  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /dev and /fix commands available.");
 
   if (command === "init" && options.pruneOld) {
     throw new Error("--prune-old can only be used with update");

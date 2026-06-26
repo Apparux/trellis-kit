@@ -1,8 +1,8 @@
 # trellis-codex-review-kit
 
-`trellis-codex-review-kit` 会把本地 Trellis + Claude Code + Codex Review 工作流文件安装到项目中。
+`trellis-codex-review-kit` 会把本地 Trellis + Claude Code 工作流文件安装到项目中。
 
-它是一个无运行时依赖的小型 Node.js CLI 包。它不会替代 Trellis、Claude Code 或 Codex CLI，只会复制可纳入版本管理的项目文件，让 Claude Code 负责实现代码、Codex CLI 负责复查本地 git diff，从而形成可重复的本地流程。
+它是一个无运行时依赖的小型 Node.js CLI 包。它不会替代 Trellis、Claude Code 或 Codex CLI，只会复制可纳入版本管理的项目文件，让 Claude Code 按 Trellis 工作流实现代码，并可选择生成 Review Handoff 用于手动外部审查。
 
 这个工具只在本地工作。安装过程不会创建 GitHub Actions，不会 push，不会 merge，也不会运行 Codex Review。
 
@@ -13,14 +13,17 @@
 运行 `trellis-codex-review-kit init` 会在所有平台安装 Markdown 模板，并按当前宿主 OS 安装 review 脚本：
 
 ```text
-.trellis/spec/guides/claude-codex-review-workflow.md
-.trellis/spec/templates/codex-handoff-template.md
+.trellis/spec/guides/review-handoff-workflow.md
+.trellis/spec/templates/review-handoff-template.md
+.trellis/spec/guides/development-location-decision.md
+.trellis/spec/guides/fast-path-change-policy.md
 .trellis/spec/scripts/codex-review.sh          # macOS/Linux
 .trellis/spec/scripts/codex-rereview.sh        # macOS/Linux
 .trellis/spec/scripts/codex-review.ps1         # Windows
 .trellis/spec/scripts/codex-rereview.ps1       # Windows
 .claude/commands/dev.md
 .claude/commands/task.md
+.claude/commands/fix.md
 ```
 
 非 Windows 主机会安装 Bash `.sh` 脚本；Windows 主机会安装原生 PowerShell `.ps1` 脚本。
@@ -33,7 +36,7 @@
 - git
 - Trellis
 - Claude Code
-- 可通过 `codex` 命令访问的 Codex CLI
+- 可通过 `codex` 命令访问的 Codex CLI（可选；仅在用户手动选择运行 Codex Review 时需要）
 - macOS/Linux，用于运行安装后的 Bash `.sh` review 脚本
 - Windows PowerShell 5.1+ 或 PowerShell 7+，用于运行安装后的 `.ps1` review 脚本
 
@@ -102,36 +105,49 @@ SKIP existing: .claude/commands/dev.md
 
 ## 日常工作流
 
-在 Claude Code 中用 `/dev` 开始新需求。推荐写法是：
+### `/dev` — 完整 Trellis 工作流
+
+`/dev` 会执行完整 Trellis 工作流。进入 implementation 前，它会询问是在当前工作区开发，还是在 `.worktrees/<task-id>` 下创建/切换任务专用 worktree。实现完成后，默认走 Trellis 内置 check。check 完成后，它会询问是否生成 Review Handoff Markdown，用于可选的手动外部审查。它不会自动调用 Codex Review、Claude Review 或任何 reviewer。
+
+在 Claude Code 中开始新需求：
 
 ```text
-/dev 新需求：实现 xxx。写完后生成 handoff，自动 commit，并自动触发 Codex Review。不要 push，不要 finish-work。
-```
-
-`新需求：` 前缀有助于表达清楚，但不是必需的；只要 `/dev` 后面是明确的实现需求，就会触发默认交付流程。更短示例：
-
-```text
+/dev 新需求：实现 xxx
 /dev 实现 xxx
 /dev 帮我实现 xxx，并更新相关测试
 ```
 
-默认交付流程已经写入 `/dev` 命令模板：实现后必须生成 handoff、自动本地 commit、自动触发 Codex Review，并且不要 push、不要 finish-work。
-
-如果你没有使用 `/dev`，这个工具不会要求 Codex Review gate。修小 bug 或做小范围本地改动时，按项目普通流程走即可，除非你明确要求 Claude Code 运行 Codex Review。
-
 对于 `/dev` 请求，Claude Code 应该：
 
 1. 读取 `.trellis/workflow.md` 和相关 `.trellis/spec/` 文件。
-2. 创建或确认 Trellis task。
-3. 按 Trellis 要求编写 task PRD、design、implementation artifacts。
-4. 写入 `.claude/commands/dev.md` 中定义的 Delivery Gate。
-5. 实现任务。
-6. 根据安装的 handoff 模板生成 `.trellis/tasks/<task>/reviews/codex-handoff.md`。
-7. 自动进行本地 commit。
-8. 自动运行本地 Codex Review。
-9. 默认只修复 P0/P1 问题。
-10. 如有修复，运行 Codex Re-Review。
-11. 在没有明确授权前，停止于 push、merge、rebase 或 finish-work 之前。
+2. 检查请求是否适用 Fast Path；如果可以，建议使用 `/fix`。
+3. 创建或确认 Trellis task。
+4. 按 Trellis 要求编写 task PRD、design、implementation artifacts。
+5. 询问用户选择开发位置：当前工作区或 `.worktrees/<task-id>`。
+6. 实现任务。
+7. 运行 Trellis 内置 check。
+8. 询问是否生成 Review Handoff Markdown。
+9. 停止——是否 review、commit、push 或 finish-work 由用户决定。
+
+### `/fix` — 快速修复
+
+`/fix` 用于小 bug、小改动和低风险 patch。它默认不创建完整 Trellis task，不创建 PRD/DESIGN/TASK，不生成 Review Handoff，不 commit，也不执行 review。
+
+```text
+/fix 修复学生档案导出时手机号为空导致 NPE 的问题
+/fix 学生档案列表里班级名称字段现在返回 classId，改成返回 className
+```
+
+### `/task` — 继续已有任务
+
+按目录名或后缀继续指定 task：
+
+```text
+/task 06-24-school-operation-log
+/task school-operation-log
+```
+
+### `/trellis:continue` — 继续中断的工作
 
 继续当前 active task：
 
@@ -139,35 +155,76 @@ SKIP existing: .claude/commands/dev.md
 /trellis:continue
 ```
 
-按 id 或后缀继续指定 task，不用每次重输长提示：
+## 开发位置选择
+
+完整 `/dev` 任务进入 implementation 前，由用户选择：
+
+1. 当前分支 / 当前工作区
+2. task 专用 git worktree
+
+如果选择 worktree，固定路径为：
 
 ```text
-/task 06-24-school-operation-log
-/task school-operation-log
+.worktrees/<task-id>
 ```
 
-`/task` 会先检查当前 active task，再从 `.trellis/tasks/` 或 `.trellis/tasks/archive/` 解析指定任务；需要时切换上下文，然后进入 Trellis continue 流程。它不会创建新任务，也不会默认重新规划，除非缺少必要 artifact 或任务状态不一致。
+固定分支名为：
 
-## Worktree 工作流
+```text
+task/<task-id>
+```
 
-对于 `/dev` 请求或明确启用 Codex gate 的工作，推荐的 task 分支或 worktree 流程是：
+示例：
 
-1. 在 task 分支或 worktree 中工作。
-2. 将实现提交到当前 worktree 分支。
-3. 在同一个 worktree 中运行 Codex Review。
-4. 默认只修复 P0/P1 发现。
-5. 运行 Codex Re-Review。
-6. 只有在 Codex Review 通过且用户明确授权后，才 merge 回目标分支。
+```text
+.worktrees/06-23-customer-safety-education
+task/06-23-customer-safety-education
+```
 
-对于未明确启用 Codex gate 的非 `/dev` 工作，使用项目普通 worktree 流程。不要自动生成 handoff、自动 commit 或运行 Codex Review。
+Agent 只负责展示状态和提供建议，用户最终决定。
 
-任何工作流都不要自动 merge，也不要自动解决冲突。
+不得在以下位置创建 worktree：
 
-## 脚本
+```text
+.trellis/worktrees/
+../<repo>-worktrees/
+../<repo>-<task-id>
+/tmp/
+```
 
-`init` 会安装 OS 原生 review 脚本。这些脚本是 `/dev` 的 review gate。Claude Code 在 `/dev` 或明确启用 Codex gate 的工作中，通常会在实现后自动调用它们。你也可以在排查或手动 review 时自己运行。
+建议目标项目 `.gitignore` 包含：
 
-### 初次 Review
+```gitignore
+.worktrees/
+```
+
+## Review Handoff
+
+Review Handoff Markdown 是可选外部审查交接材料，不是 Trellis check 的替代品。
+
+生成 Review Handoff 不代表会自动 review。
+
+用户可以选择：
+
+* 不生成
+* 生成后自己审查
+* 生成后交给 Codex
+* 生成后交给 Claude
+* 生成后交给人工 reviewer
+* 生成后使用其他工具审查
+* 稍后再生成
+
+## Review 脚本
+
+现有 Codex Review 脚本是可选的手动工具：
+
+* 不由 `/dev` 自动执行
+* 不由 `/fix` 自动执行
+* 用户需要时自行运行
+* 不能描述成强制 Delivery Gate
+* 不能描述成默认流程
+
+### 初次 Review（手动）
 
 macOS/Linux：
 
@@ -181,19 +238,7 @@ Windows PowerShell：
 .\.trellis\spec\scripts\codex-review.ps1 .trellis/tasks/<task>
 ```
 
-运行前需要：
-
-```text
-.trellis/tasks/<task>/reviews/codex-handoff.md
-```
-
-输出：
-
-```text
-.trellis/tasks/<task>/reviews/codex-review-1.md
-```
-
-### Re-Review
+### Re-Review（手动）
 
 macOS/Linux：
 
@@ -205,19 +250,6 @@ Windows PowerShell：
 
 ```powershell
 .\.trellis\spec\scripts\codex-rereview.ps1 .trellis/tasks/<task>
-```
-
-运行前需要：
-
-```text
-.trellis/tasks/<task>/reviews/codex-review-1.md
-.trellis/tasks/<task>/reviews/claude-fix-notes.md
-```
-
-输出：
-
-```text
-.trellis/tasks/<task>/reviews/codex-review-2.md
 ```
 
 ## 安全规则
@@ -232,14 +264,16 @@ Windows PowerShell：
 - 在未传入 `--force` 的 `init` 或未明确运行 `update` 时覆盖文件。
 - push、merge 或 rebase。
 - 修改远端仓库。
+- 创建 `.worktrees/` 目录。
+- 修改目标项目 `.gitignore`。
 
-安装后的工作流会要求 Claude Code 和 Codex 遵守：
+安装后的工作流会要求 Claude Code 遵守：
 
 - Claude Code 负责实现和修复。
-- Codex 只负责 review。
-- Codex 不能修改业务代码。
-- Codex Review gate 生效时，Claude Code 默认只修复 P0/P1 问题。
-- 对于 `/dev` 请求或明确启用 Codex gate 的工作，`/trellis:finish-work` 必须等 Codex Review 通过，或者用户明确覆盖这个 gate。
+- Trellis 内置 check 是默认验证方式。
+- Review Handoff 是可选且由用户控制的。
+- 外部审查由用户控制。
+- 是否 commit、push、merge 或 finish-work 由用户决定。
 
 ## 更新已安装文件
 
@@ -273,6 +307,23 @@ trellis-codex-review-kit update --dry-run
 trellis-codex-review-kit update --dry-run --prune-old
 ```
 
+## 迁移说明
+
+### 文件重命名（v0.5.0）
+
+以下模板文件已改名：
+
+| 旧名称 | 新名称 |
+|--------|--------|
+| `.trellis/spec/guides/claude-codex-review-workflow.md` | `.trellis/spec/guides/review-handoff-workflow.md` |
+| `.trellis/spec/templates/codex-handoff-template.md` | `.trellis/spec/templates/review-handoff-template.md` |
+
+旧版本安装过的项目可能仍保留旧文件。升级后请先确认没有本地自定义内容，再手动删除旧文件，避免旧规则与新的 Review Handoff Workflow 冲突。
+
+### Worktree 路径变更
+
+旧版本可能推荐过 `../<repo>-worktrees/<task-id>`、`../<repo>-<task-id>` 或 `.trellis/worktrees/<task-id>` 等 worktree 路径。当前版本统一使用 `.worktrees/<task-id>`。
+
 ## 故障排查
 
 ### `codex: command not found`
@@ -292,30 +343,6 @@ trellis init -u amin --claude --codex
 ```
 
 安装器会警告缺少 `.trellis`，但不会失败，因为有些用户可能会手动准备目录。
-
-### 缺少 handoff
-
-`codex-review.sh` 需要：
-
-```text
-.trellis/tasks/<task>/reviews/codex-handoff.md
-```
-
-可以从下面的模板创建：
-
-```text
-.trellis/spec/templates/codex-handoff-template.md
-```
-
-### 缺少 fix notes
-
-`codex-rereview.sh` 需要：
-
-```text
-.trellis/tasks/<task>/reviews/claude-fix-notes.md
-```
-
-在 Re-Review 前，请写明 P0/P1 修复内容、变更文件和已运行检查。
 
 ### 脚本 permission denied
 
@@ -346,12 +373,15 @@ git init
 mkdir -p .trellis .claude
 trellis-codex-review-kit init
 
-test -f .trellis/spec/guides/claude-codex-review-workflow.md
-test -f .trellis/spec/templates/codex-handoff-template.md
+test -f .trellis/spec/guides/review-handoff-workflow.md
+test -f .trellis/spec/templates/review-handoff-template.md
+test -f .trellis/spec/guides/development-location-decision.md
+test -f .trellis/spec/guides/fast-path-change-policy.md
 test -x .trellis/spec/scripts/codex-review.sh
 test -x .trellis/spec/scripts/codex-rereview.sh
 test -f .claude/commands/dev.md
 test -f .claude/commands/task.md
+test -f .claude/commands/fix.md
 
 # Windows 上改为验证安装的 .ps1 文件：
 # Test-Path .trellis/spec/scripts/codex-review.ps1
