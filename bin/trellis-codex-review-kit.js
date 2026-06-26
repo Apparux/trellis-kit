@@ -55,11 +55,13 @@ const templateFiles = [
   },
 ];
 
-const oldScriptFiles = [
+const oldFilesToPrune = [
   ".trellis/scripts/codex-review.sh",
   ".trellis/scripts/codex-rereview.sh",
   ".trellis/scripts/codex-review.ps1",
   ".trellis/scripts/codex-rereview.ps1",
+  ".trellis/spec/guides/claude-codex-review-workflow.md",
+  ".trellis/spec/templates/codex-handoff-template.md",
 ];
 
 function readPackageJson() {
@@ -90,7 +92,8 @@ Commands:
 
 Options:
   --force       Overwrite existing files during init. Update overwrites by default.
-  --prune-old   During update, delete old review scripts from .trellis/scripts/.
+  --prune-old   During update, delete old review scripts from .trellis/scripts/
+                and old renamed templates from .trellis/spec/.
   --dry-run     Preview actions without writing files or changing permissions.
   --help        Print this help message.
   --version     Print package version.
@@ -98,7 +101,8 @@ Options:
 Safety:
   Existing files are skipped by init by default. This installer does not run
   Trellis, Claude Code, Codex, git push, git merge, git rebase, or modify
-  .trellis/workflow.md. It deletes files only with update --prune-old.`);
+  .trellis/workflow.md. It deletes files only with update --prune-old
+  (legacy scripts and old renamed templates).`);
 }
 
 function printVersion() {
@@ -207,8 +211,8 @@ function installFile(file, targetRoot, options) {
   }
 }
 
-function pruneOldScripts(targetRoot, dryRun) {
-  for (const relativePath of oldScriptFiles) {
+function pruneOldFiles(targetRoot, dryRun) {
+  for (const relativePath of oldFilesToPrune) {
     const target = path.join(targetRoot, relativePath);
     if (!fs.existsSync(target)) {
       console.log(`${dryRun ? "WOULD SKIP missing" : "SKIP missing"}: ${relativePath}`);
@@ -272,7 +276,7 @@ function installTemplates(command, options) {
   }
 
   if (command === "update" && options.pruneOld) {
-    pruneOldScripts(targetRoot, options.dryRun);
+    pruneOldFiles(targetRoot, options.dryRun);
   }
 
   printNextSteps(command, options.dryRun);
