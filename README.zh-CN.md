@@ -147,6 +147,8 @@ SKIP existing: .claude/commands/dev.md
 /task school-operation-log
 ```
 
+当 `/task` 恢复 in-progress 的完整 Trellis task 时，它会保留与 `/dev` 相同的 check 后 Review Handoff 决策点：实现和 Trellis 内置 check 完成后，询问是不生成、现在生成，还是稍后生成。它不会自动运行 reviewer 或 review 脚本。
+
 ### `/trellis:continue` — 继续中断的工作
 
 继续当前 active task：
@@ -218,8 +220,7 @@ Review Handoff Markdown 是可选外部审查交接材料，不是 Trellis check
 
 现有 Codex Review 脚本是可选的手动工具：
 
-* 不由 `/dev` 自动执行
-* 不由 `/fix` 自动执行
+* 不由 `/dev`、`/task` 或 `/fix` 自动执行
 * 用户需要时自行运行
 * 不能描述成强制 Delivery Gate
 * 不能描述成默认流程

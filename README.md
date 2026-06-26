@@ -147,6 +147,8 @@ Continue a specific existing Trellis task by directory name or suffix:
 /task school-operation-log
 ```
 
+When `/task` resumes an in-progress full Trellis task, it preserves the same post-check Review Handoff decision as `/dev`: after implementation and Trellis native check, it asks whether to skip, generate now, or generate later. It does not automatically run reviewers or review scripts.
+
 ### `/trellis:continue` — Continue Interrupted Work
 
 Continue work with the current active task:
@@ -218,7 +220,7 @@ The user may choose to:
 
 The installed Codex Review scripts are optional manual tools:
 
-* Not automatically executed by `/dev` or `/fix`
+* Not automatically executed by `/dev`, `/task`, or `/fix`
 * Users run them manually when they choose
 * Not described as a mandatory Delivery Gate
 * Not described as the default workflow

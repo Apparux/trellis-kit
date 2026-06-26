@@ -11,6 +11,10 @@ Usage:
 
 The text after `/task` is the target task id. This command is a continuation shortcut, not a task-creation command.
 
+## Required Reading
+
+When continuing a full Trellis task, read `.trellis/spec/guides/review-handoff-workflow.md` before the post-check decision point.
+
 ## Required Behavior
 
 For every `/task <task-id>` request:
@@ -88,3 +92,75 @@ After confirming or switching the active task, continue using the Trellis contin
    ```bash
    python3 ./.trellis/scripts/get_context.py --mode phase --step <X.X> --platform claude
    ```
+
+## Post-Check Review Handoff Decision
+
+For an in-progress full Trellis task resumed through `/task`, continue implementation and Trellis native check as usual. After implementation and Trellis native check are complete, ask whether to generate a Review Handoff Markdown file for optional manual external review before final summary or finish-style wrap-up.
+
+Ask:
+
+> 实现和 Trellis 内置 check 已完成。请选择后续处理方式：
+>
+> A. 不生成 Review Handoff，只输出实现总结
+> B. 生成 Review Handoff Markdown，稍后我手动决定是否交给 Codex / Claude / 人工 reviewer
+> C. 暂不生成，稍后再说
+
+If the user chooses A:
+
+* Do not generate a Review Handoff.
+* Return final implementation summary.
+* Include changed files, checks run, and remaining risks.
+
+If the user chooses B:
+
+* Generate the Review Handoff Markdown according to `.trellis/spec/guides/review-handoff-workflow.md`.
+* Return the generated file path.
+* Do not run any reviewer.
+* Do not run Codex.
+* Do not run Claude.
+* Do not run review scripts.
+
+If the user chooses C:
+
+* Do not generate a Review Handoff.
+* Explain that the user can request it later.
+
+The agent must not automatically run:
+
+* `.trellis/scripts/codex-review.sh`
+* `.trellis/scripts/codex-rereview.sh`
+* `.trellis/scripts/codex-review.ps1`
+* `.trellis/scripts/codex-rereview.ps1`
+* `.trellis/spec/scripts/codex-review.sh`
+* `.trellis/spec/scripts/codex-rereview.sh`
+* `.trellis/spec/scripts/codex-review.ps1`
+* `.trellis/spec/scripts/codex-rereview.ps1`
+* `codex`
+* `claude`
+* any external reviewer command
+
+The user decides:
+
+* whether to generate a Review Handoff
+* whether to do external review
+* when to review
+* who or what tool reviews it
+* whether to apply review findings
+
+## Forbidden
+
+Unless the user explicitly authorizes it in the current conversation, `/task` must not automatically:
+
+* Create a new task
+* Re-plan when existing task status and artifacts are consistent
+* Run Codex Review
+* Run Claude Review
+* Run any external reviewer
+* Run review scripts
+* Fix P0/P1 findings from external review
+* Re-review
+* Commit
+* Push
+* Merge
+* Rebase
+* Run finish-work
