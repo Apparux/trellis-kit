@@ -50,7 +50,7 @@ The user may manually choose one of the following:
 1. Review personally.
 2. Paste the handoff into Codex.
 3. Paste the handoff into Claude.
-4. Run the provided review scripts manually.
+4. Use another external review tool manually.
 5. Assign the handoff to a human reviewer.
 6. Skip external review.
 
@@ -72,16 +72,13 @@ Review Handoff Markdown must include:
 * Git diff scope
 * Suggested review prompt
 
-## Review Scripts
+## External Review Tooling
 
-The installed review scripts under `.trellis/spec/scripts/` are optional manual tools:
+This kit does not install bundled review scripts.
 
-* `codex-review.sh` / `codex-review.ps1`
-* `codex-rereview.sh` / `codex-rereview.ps1`
+Review Handoff Markdown is the portable artifact for manual external review. The user may paste it into Codex, Claude, another tool, or send it to a human reviewer.
 
-These scripts are not automatically executed by `/dev` or `/fix`.
-
-The user may run them manually when they choose to use Codex as an external reviewer.
+No command automatically runs external review.
 
 ## Forbidden
 

@@ -102,6 +102,4 @@ Do not do any of the following before the user chooses:
 * Rebase
 * Run finish-work
 
-For `/fix`, the agent may recommend staying in the current workspace when the change is tiny, the workspace is clean, and there are no unrelated changes.
-
-If the location is ambiguous, risky, or the workspace has unrelated changes, pause and ask the user to choose.
+For `/fix`, follow `fast-path-change-policy.md`. Fast Path Fix is intended for small current-workspace changes. If the current workspace is not safe for the fix, stop and ask the user to use `/dev` or retry after the workspace is clean.

@@ -10,10 +10,6 @@ const __dirname = path.dirname(__filename);
 const pkgRoot = path.resolve(__dirname, "..");
 const packageJsonPath = path.join(pkgRoot, "package.json");
 
-const isWindows = process.platform === "win32";
-const scriptExtension = isWindows ? "ps1" : "sh";
-const scriptExecutable = !isWindows;
-
 const templateFiles = [
   {
     from: "templates/trellis/spec/guides/review-handoff-workflow.md",
@@ -32,14 +28,8 @@ const templateFiles = [
     to: ".trellis/spec/guides/fast-path-change-policy.md",
   },
   {
-    from: `templates/trellis/scripts/codex-review.${scriptExtension}`,
-    to: `.trellis/spec/scripts/codex-review.${scriptExtension}`,
-    executable: scriptExecutable,
-  },
-  {
-    from: `templates/trellis/scripts/codex-rereview.${scriptExtension}`,
-    to: `.trellis/spec/scripts/codex-rereview.${scriptExtension}`,
-    executable: scriptExecutable,
+    from: "templates/trellis/spec/guides/spec-cleanup-guide.md",
+    to: ".trellis/spec/guides/spec-cleanup-guide.md",
   },
   {
     from: "templates/claude/commands/dev.md",
@@ -53,6 +43,10 @@ const templateFiles = [
     from: "templates/claude/commands/fix.md",
     to: ".claude/commands/fix.md",
   },
+  {
+    from: "templates/claude/commands/spec-cleanup.md",
+    to: ".claude/commands/spec-cleanup.md",
+  },
 ];
 
 const oldFilesToPrune = [
@@ -60,6 +54,10 @@ const oldFilesToPrune = [
   ".trellis/scripts/codex-rereview.sh",
   ".trellis/scripts/codex-review.ps1",
   ".trellis/scripts/codex-rereview.ps1",
+  ".trellis/spec/scripts/codex-review.sh",
+  ".trellis/spec/scripts/codex-rereview.sh",
+  ".trellis/spec/scripts/codex-review.ps1",
+  ".trellis/spec/scripts/codex-rereview.ps1",
   ".trellis/spec/guides/claude-codex-review-workflow.md",
   ".trellis/spec/templates/codex-handoff-template.md",
 ];
@@ -87,13 +85,11 @@ Commands:
                 Existing files are skipped unless --force is passed.
   update        Update installed workflow files from this package.
                 Existing files are overwritten by default.
-                Both commands install Bash .sh review scripts on macOS/Linux
-                and native PowerShell .ps1 review scripts on Windows.
 
 Options:
   --force       Overwrite existing files during init. Update overwrites by default.
-  --prune-old   During update, delete old review scripts from .trellis/scripts/
-                and old renamed templates from .trellis/spec/.
+  --prune-old   During update, delete legacy review scripts from .trellis/scripts/
+                and .trellis/spec/scripts/, plus old renamed templates from .trellis/spec/.
   --dry-run     Preview actions without writing files or changing permissions.
   --help        Print this help message.
   --version     Print package version.
@@ -102,7 +98,7 @@ Safety:
   Existing files are skipped by init by default. This installer does not run
   Trellis, Claude Code, Codex, git push, git merge, git rebase, or modify
   .trellis/workflow.md. It deletes files only with update --prune-old
-  (legacy scripts and old renamed templates).`);
+  (legacy review scripts and old renamed templates).`);
 }
 
 function printVersion() {
@@ -246,11 +242,7 @@ Next steps:
    /fix <bug description>
 
 3. Continue interrupted work:
-   /trellis:continue
-
-4. Review scripts are available as optional manual tools:
-   .trellis/spec/scripts/codex-review.sh .trellis/tasks/<task>
-   .trellis/spec/scripts/codex-rereview.sh .trellis/tasks/<task>`);
+   /trellis:continue`);
 }
 
 function installTemplates(command, options) {
@@ -260,7 +252,7 @@ function installTemplates(command, options) {
   console.log(`\nCommand: ${command}`);
   console.log(`Target: ${targetRoot}\n`);
 
-  warnIfMissing(targetRoot, ".git", "Run inside a git project before using the installed review scripts.");
+  warnIfMissing(targetRoot, ".git", "Trellis workflow files are intended for use inside a git project.");
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
   warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /dev and /fix commands available.");
 

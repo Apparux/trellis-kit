@@ -127,16 +127,9 @@ If the user chooses C:
 
 The agent must not automatically run:
 
-* `.trellis/scripts/codex-review.sh`
-* `.trellis/scripts/codex-rereview.sh`
-* `.trellis/scripts/codex-review.ps1`
-* `.trellis/scripts/codex-rereview.ps1`
-* `.trellis/spec/scripts/codex-review.sh`
-* `.trellis/spec/scripts/codex-rereview.sh`
-* `.trellis/spec/scripts/codex-review.ps1`
-* `.trellis/spec/scripts/codex-rereview.ps1`
 * `codex`
 * `claude`
+* any review script
 * any external reviewer command
 
 The user decides:

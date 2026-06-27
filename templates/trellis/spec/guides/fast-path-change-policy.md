@@ -72,28 +72,17 @@ If the user asks to attach the fix to an existing Trellis task, add a short note
 
 ## Work Location Decision
 
-Before editing, follow `.trellis/spec/guides/development-location-decision.md` when the change is not obviously safe to make in the current workspace.
+Fast Path Fix is intended for current-workspace changes.
 
-For Fast Path Fix, recommend current branch/current working tree when:
+Before editing, inspect the current branch, current working directory, and uncommitted changes.
+
+For Fast Path Fix, continue only when:
 
 * The fix is small
-* The current branch already matches the related work
-* There are no unrelated uncommitted changes
+* The current branch/current workspace is appropriate
+* There are no unrelated uncommitted changes that would make the fix unsafe
 
-Recommend task-specific worktree when:
-
-* The current working tree has unrelated changes
-* The fix is risky
-* The fix may need separate review
-* The user wants isolation
-
-When using a task-specific worktree for `/fix`, the path must still be:
-
-```text
-.worktrees/<fix-name-or-task-id>
-```
-
-The user makes the final decision whenever the location is ambiguous or the guide requires a choice.
+If the workspace has unrelated changes or the fix is risky, stop and explain that the request should use the full `/dev` workflow or be retried after the workspace is clean.
 
 ## Forbidden
 
@@ -104,7 +93,7 @@ Do not do any of the following for Fast Path Fix unless explicitly requested:
 * Change database schema
 * Perform large refactoring
 * Start implementation before inspecting relevant code
-* Silently choose worktree or current branch when a user decision is required
+* Switch development location
 * Generate Review Handoff
 * Commit
 * Run Codex Review

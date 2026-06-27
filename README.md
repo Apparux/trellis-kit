@@ -10,23 +10,19 @@ This kit is local-only. It does not create GitHub Actions, does not push, does n
 
 ## What It Installs
 
-Running `trellis-codex-review-kit init` installs the Markdown templates on every platform and installs review scripts for the host OS:
+Running `trellis-codex-review-kit init` installs the Markdown templates and Claude command templates:
 
 ```text
 .trellis/spec/guides/review-handoff-workflow.md
 .trellis/spec/templates/review-handoff-template.md
 .trellis/spec/guides/development-location-decision.md
 .trellis/spec/guides/fast-path-change-policy.md
-.trellis/spec/scripts/codex-review.sh          # macOS/Linux
-.trellis/spec/scripts/codex-rereview.sh        # macOS/Linux
-.trellis/spec/scripts/codex-review.ps1         # Windows
-.trellis/spec/scripts/codex-rereview.ps1       # Windows
+.trellis/spec/guides/spec-cleanup-guide.md
 .claude/commands/dev.md
 .claude/commands/task.md
 .claude/commands/fix.md
+.claude/commands/spec-cleanup.md
 ```
-
-On non-Windows hosts, `init` installs the Bash `.sh` scripts. On Windows hosts, it installs the native PowerShell `.ps1` scripts instead.
 
 The installed files should be committed into the target project so the workflow is stable, reviewable, and editable by the team.
 
@@ -36,9 +32,7 @@ The installed files should be committed into the target project so the workflow 
 - git
 - Trellis
 - Claude Code
-- Codex CLI available as `codex` (optional; only needed if the user chooses to run Codex Review manually)
-- macOS/Linux for the installed Bash `.sh` review scripts
-- Windows PowerShell 5.1+ or PowerShell 7+ for the installed `.ps1` review scripts
+- Codex CLI available as `codex` (optional; only needed if the user independently chooses to use Codex for manual external review)
 
 ## Install Package
 
@@ -119,7 +113,7 @@ Start new feature work in Claude Code:
 
 For `/dev` requests, Claude Code should:
 
-1. Read `.trellis/workflow.md` and relevant `.trellis/spec/` files.
+1. Read `.trellis/workflow.md` and relevant rules selected by the Trellis workflow, task context, or spec indexes.
 2. Check whether the request qualifies for Fast Path; if so, suggest `/fix` instead.
 3. Create or confirm a Trellis task.
 4. Write the task PRD/design/implementation artifacts required by Trellis.
@@ -156,6 +150,18 @@ Continue work with the current active task:
 ```text
 /trellis:continue
 ```
+
+## /spec-cleanup
+
+`/spec-cleanup` automatically audits, safely organizes, and consolidates `.trellis/spec/`. It keeps active guides, archives historical task specs, deprecates replaced workflow rules, merges low-risk duplicate specs into canonical guides, updates references to canonical files, and removes stale broad spec-loading wording without overriding Trellis-native context selection. It asks for confirmation before destructive, ambiguous, conflicting, or behavior-changing actions such as deletion, merging conflicting rules, rewriting core rules, or moving files whose purpose is unclear.
+
+```text
+/spec-cleanup
+```
+
+## Selective Spec Loading
+
+Commands should not blindly load the entire `.trellis/spec/` directory by default. `/dev` and `/fix` rely on the native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/spec-cleanup` reads its cleanup guide first, then lists and selectively analyzes `.trellis/spec/` for cleanup decisions.
 
 ## Development Location
 
@@ -216,42 +222,13 @@ The user may choose to:
 * Generate and use other tools
 * Generate later
 
-## Review Scripts
+## Manual External Review
 
-The installed Codex Review scripts are optional manual tools:
+This kit does not install bundled review scripts.
 
-* Not automatically executed by `/dev`, `/task`, or `/fix`
-* Users run them manually when they choose
-* Not described as a mandatory Delivery Gate
-* Not described as the default workflow
+Review Handoff Markdown is the portable handoff artifact. The user may paste it into Codex, Claude, another tool, or send it to a human reviewer manually.
 
-### Initial Review (manual)
-
-macOS/Linux:
-
-```bash
-.trellis/spec/scripts/codex-review.sh .trellis/tasks/<task>
-```
-
-Windows PowerShell:
-
-```powershell
-.\.trellis\spec\scripts\codex-review.ps1 .trellis/tasks/<task>
-```
-
-### Re-Review (manual)
-
-macOS/Linux:
-
-```bash
-.trellis/spec/scripts/codex-rereview.sh .trellis/tasks/<task>
-```
-
-Windows PowerShell:
-
-```powershell
-.\.trellis\spec\scripts\codex-rereview.ps1 .trellis/tasks/<task>
-```
+No command in this kit runs an external reviewer automatically.
 
 ## Safety Rules
 
@@ -261,7 +238,7 @@ The installer does not:
 - Run `trellis init`.
 - Install Trellis, Claude Code, or Codex CLI.
 - Run Codex Review during installation.
-- Delete files by default; only `update --prune-old` deletes the four documented legacy review scripts under `.trellis/scripts/`.
+- Delete files by default; only `update --prune-old` deletes the documented legacy review scripts under `.trellis/scripts/` and `.trellis/spec/scripts/`, plus old renamed templates under `.trellis/spec/`.
 - Overwrite files unless `--force` is used with `init` or `update` is used intentionally.
 - Push, merge, or rebase.
 - Modify remote repositories.
@@ -286,7 +263,7 @@ trellis-codex-review-kit update
 
 `update` overwrites installed kit files with the packaged templates. Review local customizations before running it.
 
-If you are migrating from a version that installed review scripts under `.trellis/scripts/`, explicitly prune those old script files after installing the new `.trellis/spec/scripts/` files:
+If you are migrating from a version that installed review scripts under `.trellis/scripts/` or `.trellis/spec/scripts/`, or old renamed Review Handoff templates under `.trellis/spec/`, explicitly prune those old files after installing the current files:
 
 ```bash
 trellis-codex-review-kit update --prune-old
@@ -299,6 +276,12 @@ trellis-codex-review-kit update --prune-old
 .trellis/scripts/codex-rereview.sh
 .trellis/scripts/codex-review.ps1
 .trellis/scripts/codex-rereview.ps1
+.trellis/spec/scripts/codex-review.sh
+.trellis/spec/scripts/codex-rereview.sh
+.trellis/spec/scripts/codex-review.ps1
+.trellis/spec/scripts/codex-rereview.ps1
+.trellis/spec/guides/claude-codex-review-workflow.md
+.trellis/spec/templates/codex-handoff-template.md
 ```
 
 Use dry run first when unsure:
@@ -327,14 +310,6 @@ Older versions may have recommended worktree paths such as `../<repo>-worktrees/
 
 ## Troubleshooting
 
-### `codex: command not found`
-
-Install Codex CLI and ensure `codex` is on `PATH`:
-
-```bash
-codex --version
-```
-
 ### `.trellis directory not found`
 
 Initialize Trellis in the target project first:
@@ -344,21 +319,6 @@ trellis init -u amin --claude --codex
 ```
 
 The installer warns about missing `.trellis`, but it does not fail because some users may prepare directories manually.
-
-### Script permission denied
-
-On macOS/Linux, reinstall or fix permissions:
-
-```bash
-trellis-codex-review-kit init --force
-chmod +x .trellis/spec/scripts/codex-review.sh .trellis/spec/scripts/codex-rereview.sh
-```
-
-On Windows PowerShell, if execution policy blocks local scripts, run from an approved shell or use a policy appropriate for your machine, such as `RemoteSigned`, according to your organization's rules.
-
-### Not inside git work tree
-
-Run review scripts from inside a git repository/worktree. Codex Review depends on the local git diff.
 
 ## Local Manual Test Outline
 
@@ -378,13 +338,9 @@ test -f .trellis/spec/guides/review-handoff-workflow.md
 test -f .trellis/spec/templates/review-handoff-template.md
 test -f .trellis/spec/guides/development-location-decision.md
 test -f .trellis/spec/guides/fast-path-change-policy.md
-test -x .trellis/spec/scripts/codex-review.sh
-test -x .trellis/spec/scripts/codex-rereview.sh
+test -f .trellis/spec/guides/spec-cleanup-guide.md
 test -f .claude/commands/dev.md
 test -f .claude/commands/task.md
 test -f .claude/commands/fix.md
-
-# On Windows, verify the installed script files instead:
-# Test-Path .trellis/spec/scripts/codex-review.ps1
-# Test-Path .trellis/spec/scripts/codex-rereview.ps1
+test -f .claude/commands/spec-cleanup.md
 ```

@@ -17,7 +17,7 @@ Before implementing, read:
 2. `.trellis/spec/guides/fast-path-change-policy.md`
 3. `.trellis/spec/guides/development-location-decision.md`
 4. `.trellis/spec/guides/review-handoff-workflow.md`
-5. Other relevant files under `.trellis/spec/`
+5. Relevant `.trellis/spec/` files selected by the Trellis workflow, task context, or spec indexes
 6. The active task `prd.md`, `design.md` if present, and `implement.md` if present
 
 ## Fast Path Check
@@ -114,12 +114,9 @@ If the user chooses C:
 
 The agent must not automatically run:
 
-* `.trellis/scripts/codex-review.sh`
-* `.trellis/scripts/codex-rereview.sh`
-* `.trellis/scripts/codex-review.ps1`
-* `.trellis/scripts/codex-rereview.ps1`
 * `codex`
 * `claude`
+* any review script
 * any external reviewer command
 
 The user decides:

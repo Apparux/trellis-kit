@@ -30,14 +30,11 @@ If you're using Codex or another agent-capable tool, additional project-scoped h
 - `.agents/skills/` — reusable Trellis skills
 - `.codex/agents/` — optional custom subagents
 
-## Review Scripts (Optional Manual Tools)
+## Manual External Review
 
-- `.trellis/spec/scripts/codex-review.sh` — manual Codex Review (macOS/Linux)
-- `.trellis/spec/scripts/codex-rereview.sh` — manual Codex Re-Review (macOS/Linux)
-- `.trellis/spec/scripts/codex-review.ps1` — manual Codex Review (Windows)
-- `.trellis/spec/scripts/codex-rereview.ps1` — manual Codex Re-Review (Windows)
+This kit does not install bundled review scripts. Review Handoff Markdown is the portable artifact for manual external review. Users may paste it into Codex, Claude, another tool, or send it to a human reviewer manually.
 
-These scripts are not automatically executed by `/dev` or `/fix`. Users run them manually when they choose to use Codex as an external reviewer.
+No Trellis command automatically runs an external reviewer.
 
 Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
 

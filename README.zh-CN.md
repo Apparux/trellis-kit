@@ -10,23 +10,19 @@
 
 ## 安装内容
 
-运行 `trellis-codex-review-kit init` 会在所有平台安装 Markdown 模板，并按当前宿主 OS 安装 review 脚本：
+运行 `trellis-codex-review-kit init` 会安装 Markdown 模板和 Claude 命令模板：
 
 ```text
 .trellis/spec/guides/review-handoff-workflow.md
 .trellis/spec/templates/review-handoff-template.md
 .trellis/spec/guides/development-location-decision.md
 .trellis/spec/guides/fast-path-change-policy.md
-.trellis/spec/scripts/codex-review.sh          # macOS/Linux
-.trellis/spec/scripts/codex-rereview.sh        # macOS/Linux
-.trellis/spec/scripts/codex-review.ps1         # Windows
-.trellis/spec/scripts/codex-rereview.ps1       # Windows
+.trellis/spec/guides/spec-cleanup-guide.md
 .claude/commands/dev.md
 .claude/commands/task.md
 .claude/commands/fix.md
+.claude/commands/spec-cleanup.md
 ```
-
-非 Windows 主机会安装 Bash `.sh` 脚本；Windows 主机会安装原生 PowerShell `.ps1` 脚本。
 
 这些安装后的文件应该提交到目标项目中，这样工作流就能保持稳定、可审查，并且团队可以按需编辑。
 
@@ -36,9 +32,7 @@
 - git
 - Trellis
 - Claude Code
-- 可通过 `codex` 命令访问的 Codex CLI（可选；仅在用户手动选择运行 Codex Review 时需要）
-- macOS/Linux，用于运行安装后的 Bash `.sh` review 脚本
-- Windows PowerShell 5.1+ 或 PowerShell 7+，用于运行安装后的 `.ps1` review 脚本
+- 可通过 `codex` 命令访问的 Codex CLI（可选；仅在用户自行选择用 Codex 做手动外部审查时需要）
 
 ## 安装包
 
@@ -119,7 +113,7 @@ SKIP existing: .claude/commands/dev.md
 
 对于 `/dev` 请求，Claude Code 应该：
 
-1. 读取 `.trellis/workflow.md` 和相关 `.trellis/spec/` 文件。
+1. 读取 `.trellis/workflow.md`，并按 Trellis workflow、task context 或 spec index 选择相关规则。
 2. 检查请求是否适用 Fast Path；如果可以，建议使用 `/fix`。
 3. 创建或确认 Trellis task。
 4. 按 Trellis 要求编写 task PRD、design、implementation artifacts。
@@ -156,6 +150,18 @@ SKIP existing: .claude/commands/dev.md
 ```text
 /trellis:continue
 ```
+
+## /spec-cleanup
+
+`/spec-cleanup` 会自动审查、安全整理并整合 `.trellis/spec/`。它会保留当前有效规则，自动归档历史任务文档，自动废弃已被替代的旧流程规则，把低风险重复 spec 自动合并到 canonical guide，更新旧引用到 canonical 文件，并移除过时的全量读取 spec 写法，但不覆盖 Trellis 原生 context 选择。只有在删除、歧义、冲突或会改变核心行为的操作时才会询问确认。
+
+```text
+/spec-cleanup
+```
+
+## Selective Spec Loading
+
+命令不应默认盲目全量读取 `.trellis/spec/`。`/dev` 和 `/fix` 交给 Trellis 原生 workflow、task context 和 spec index 判断哪些项目规则相关；`/spec-cleanup` 会先读取 cleanup guide，再列出并按清理决策需要选择性分析 `.trellis/spec/`。
 
 ## 开发位置选择
 
@@ -216,42 +222,13 @@ Review Handoff Markdown 是可选外部审查交接材料，不是 Trellis check
 * 生成后使用其他工具审查
 * 稍后再生成
 
-## Review 脚本
+## 手动外部审查
 
-现有 Codex Review 脚本是可选的手动工具：
+本 kit 不再安装 bundled review 脚本。
 
-* 不由 `/dev`、`/task` 或 `/fix` 自动执行
-* 用户需要时自行运行
-* 不能描述成强制 Delivery Gate
-* 不能描述成默认流程
+Review Handoff Markdown 是可移植的交接材料。用户可以手动粘贴给 Codex、Claude、其他工具，或发送给人工 reviewer。
 
-### 初次 Review（手动）
-
-macOS/Linux：
-
-```bash
-.trellis/spec/scripts/codex-review.sh .trellis/tasks/<task>
-```
-
-Windows PowerShell：
-
-```powershell
-.\.trellis\spec\scripts\codex-review.ps1 .trellis/tasks/<task>
-```
-
-### Re-Review（手动）
-
-macOS/Linux：
-
-```bash
-.trellis/spec/scripts/codex-rereview.sh .trellis/tasks/<task>
-```
-
-Windows PowerShell：
-
-```powershell
-.\.trellis\spec\scripts\codex-rereview.ps1 .trellis/tasks/<task>
-```
+本 kit 中没有任何命令会自动运行外部 reviewer。
 
 ## 安全规则
 
@@ -261,7 +238,7 @@ Windows PowerShell：
 - 运行 `trellis init`。
 - 安装 Trellis、Claude Code 或 Codex CLI。
 - 在安装过程中运行 Codex Review。
-- 默认删除文件；只有 `update --prune-old` 会删除 `.trellis/scripts/` 下文档列出的四个遗留 review 脚本。
+- 默认删除文件；只有 `update --prune-old` 会删除 `.trellis/scripts/` 和 `.trellis/spec/scripts/` 下文档列出的遗留 review 脚本，以及 `.trellis/spec/` 下已改名的旧模板。
 - 在未传入 `--force` 的 `init` 或未明确运行 `update` 时覆盖文件。
 - push、merge 或 rebase。
 - 修改远端仓库。
@@ -286,7 +263,7 @@ trellis-codex-review-kit update
 
 `update` 会用包内模板覆盖已安装的 kit 文件。运行前请先检查本地自定义内容。
 
-如果你正在从旧版本迁移，旧版本曾把 review 脚本安装到 `.trellis/scripts/`，可以显式清理这些旧脚本；新脚本会安装在 `.trellis/spec/scripts/`：
+如果你正在从旧版本迁移，旧版本曾把 review 脚本安装到 `.trellis/scripts/` 或 `.trellis/spec/scripts/`，或在 `.trellis/spec/` 下安装过已改名的旧 Review Handoff 模板，可以在安装当前文件后显式清理这些旧文件：
 
 ```bash
 trellis-codex-review-kit update --prune-old
@@ -299,6 +276,12 @@ trellis-codex-review-kit update --prune-old
 .trellis/scripts/codex-rereview.sh
 .trellis/scripts/codex-review.ps1
 .trellis/scripts/codex-rereview.ps1
+.trellis/spec/scripts/codex-review.sh
+.trellis/spec/scripts/codex-rereview.sh
+.trellis/spec/scripts/codex-review.ps1
+.trellis/spec/scripts/codex-rereview.ps1
+.trellis/spec/guides/claude-codex-review-workflow.md
+.trellis/spec/templates/codex-handoff-template.md
 ```
 
 不确定时先 dry run：
@@ -327,14 +310,6 @@ trellis-codex-review-kit update --dry-run --prune-old
 
 ## 故障排查
 
-### `codex: command not found`
-
-安装 Codex CLI，并确保 `codex` 在 `PATH` 上：
-
-```bash
-codex --version
-```
-
 ### `.trellis directory not found`
 
 先在目标项目中初始化 Trellis：
@@ -344,21 +319,6 @@ trellis init -u amin --claude --codex
 ```
 
 安装器会警告缺少 `.trellis`，但不会失败，因为有些用户可能会手动准备目录。
-
-### 脚本 permission denied
-
-在 macOS/Linux 上，重新安装或修复权限：
-
-```bash
-trellis-codex-review-kit init --force
-chmod +x .trellis/spec/scripts/codex-review.sh .trellis/spec/scripts/codex-rereview.sh
-```
-
-在 Windows PowerShell 上，如果执行策略阻止本地脚本，请使用组织允许的 shell 或按组织规则配置适合本机的执行策略，例如 `RemoteSigned`。
-
-### 不在 git work tree 内
-
-请在 git 仓库或 worktree 中运行 review 脚本。Codex Review 依赖本地 git diff。
 
 ## 本地手动测试概要
 
@@ -378,13 +338,9 @@ test -f .trellis/spec/guides/review-handoff-workflow.md
 test -f .trellis/spec/templates/review-handoff-template.md
 test -f .trellis/spec/guides/development-location-decision.md
 test -f .trellis/spec/guides/fast-path-change-policy.md
-test -x .trellis/spec/scripts/codex-review.sh
-test -x .trellis/spec/scripts/codex-rereview.sh
+test -f .trellis/spec/guides/spec-cleanup-guide.md
 test -f .claude/commands/dev.md
 test -f .claude/commands/task.md
 test -f .claude/commands/fix.md
-
-# Windows 上改为验证安装的 .ps1 文件：
-# Test-Path .trellis/spec/scripts/codex-review.ps1
-# Test-Path .trellis/spec/scripts/codex-rereview.ps1
+test -f .claude/commands/spec-cleanup.md
 ```

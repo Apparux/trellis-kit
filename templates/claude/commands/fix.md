@@ -18,8 +18,7 @@ Accepted examples:
 Before editing, read:
 
 1. `.trellis/spec/guides/fast-path-change-policy.md`
-2. `.trellis/spec/guides/development-location-decision.md`
-3. Relevant project rules under `.trellis/spec/`
+2. Relevant project rules under `.trellis/spec/` selected by Trellis context or spec indexes
 
 ## Fast Path Rule
 
@@ -35,26 +34,15 @@ For every `/fix <request>`:
 8. Do not run Codex Review, Claude Review, external review, or review scripts.
 9. Do not push, merge, rebase, or run finish-work.
 
-## Development Location Rule
+## Current Workspace Rule
 
 Before editing:
 
 1. Check current branch.
 2. Check current working directory.
 3. Check whether there are uncommitted changes.
-4. Check existing git worktrees when relevant.
-5. Check whether `.gitignore` ignores `.worktrees/`.
-6. Follow `.trellis/spec/guides/development-location-decision.md` if the location is ambiguous, risky, or the current workspace has unrelated changes.
-
-For clearly tiny changes in a clean current workspace, the agent may recommend staying in the current working tree, but must still avoid unrelated files.
-
-If the user chooses worktree, use only:
-
-```text
-.worktrees/<fix-name-or-task-id>
-```
-
-Do not create worktrees in any other location.
+4. Stay in the current workspace for `/fix`.
+5. If the workspace has unrelated changes or the fix is risky, stop and explain that the request should use `/dev` or be retried after the workspace is clean.
 
 ## Implementation Rule
 
