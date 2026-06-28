@@ -72,13 +72,13 @@ function readPackageJson() {
 
 function printHelp() {
   const pkg = readPackageJson();
-  console.log(`Trellis Codex Review Kit ${pkg.version}
+  console.log(`Trellis Kit ${pkg.version}
 
 Usage:
-  trellis-codex-review-kit init [--force] [--dry-run]
-  trellis-codex-review-kit update [--dry-run] [--prune-old]
-  trellis-codex-review-kit --help
-  trellis-codex-review-kit --version
+  trellis-kit init [--force] [--dry-run]
+  trellis-kit update [--dry-run] [--prune-old]
+  trellis-kit --help
+  trellis-kit --version
 
 Commands:
   init          Install Trellis + Claude Code workflow files.
@@ -107,7 +107,7 @@ function printVersion() {
 
 function usageError(message) {
   console.error(`ERROR: ${message}`);
-  console.error("Run `trellis-codex-review-kit --help` for usage.");
+  console.error("Run `trellis-kit --help` for usage.");
   process.exitCode = 1;
 }
 
@@ -231,7 +231,7 @@ function pruneOldFiles(targetRoot, dryRun) {
 function printNextSteps(command, dryRun) {
   const action = command === "update" ? "Updated" : "Installed";
   const dryAction = command === "update" ? "update" : "install";
-  const verb = dryRun ? `Dry run complete for Trellis Codex Review Kit ${dryAction}.` : `${action} Trellis Codex Review Kit.`;
+  const verb = dryRun ? `Dry run complete for Trellis Kit ${dryAction}.` : `${action} Trellis Kit.`;
   console.log(`\n${verb}
 
 Next steps:
@@ -248,7 +248,7 @@ Next steps:
 function installTemplates(command, options) {
   const targetRoot = process.cwd();
 
-  console.log("Trellis Codex Review Kit");
+  console.log("Trellis Kit");
   console.log(`\nCommand: ${command}`);
   console.log(`Target: ${targetRoot}\n`);
 

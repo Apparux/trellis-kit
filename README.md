@@ -1,16 +1,41 @@
-# trellis-codex-review-kit
+# Trellis Kit
 
-`trellis-codex-review-kit` installs local Trellis + Claude Code workflow files into a project.
+Trellis Kit installs Trellis workflow guides, Claude commands, and optional review handoff tooling for AI-assisted development.
 
-It is a small Node.js CLI package with no runtime dependencies. It does not replace Trellis, Claude Code, or Codex CLI. It only copies versionable project files so Claude Code can implement work following the Trellis workflow, with optional Review Handoff for manual external review.
+It is a small Node.js CLI package with no runtime dependencies. It does not replace Trellis, Claude Code, or Codex CLI. It only copies versionable project files so Claude Code can implement work following the Trellis workflow, with optional Review Handoff for manual external review. Optional Codex review remains user-controlled and manual.
 
 This kit is local-only. It does not create GitHub Actions, does not push, does not merge, and does not run Codex Review during installation.
 
 [中文 README](README.zh-CN.md)
 
+## Rename Notice
+
+This project was previously named `trellis-codex-review-kit`.
+
+The new package and CLI name is `trellis-kit`.
+
+If you installed the old package globally, uninstall it first:
+
+```bash
+npm uninstall -g trellis-codex-review-kit
+npm install -g trellis-kit
+```
+
+If your project still references the old command, replace:
+
+```bash
+trellis-codex-review-kit
+```
+
+with:
+
+```bash
+trellis-kit
+```
+
 ## What It Installs
 
-Running `trellis-codex-review-kit init` installs the Markdown templates and Claude command templates:
+Running `trellis-kit init` installs the Markdown templates and Claude command templates:
 
 ```text
 .trellis/spec/guides/review-handoff-workflow.md
@@ -45,20 +70,29 @@ npm install -g .
 From npm (remote install):
 
 ```bash
-npm install -g trellis-codex-review-kit
+npm install -g trellis-kit
 ```
 
 If you do not want a global install, you can also run the published CLI through `npx`:
 
 ```bash
-npx trellis-codex-review-kit init
+npx trellis-kit init
 ```
 
 Verify:
 
 ```bash
-trellis-codex-review-kit --help
-trellis-codex-review-kit --version
+trellis-kit --help
+trellis-kit --version
+```
+
+## Local Development
+
+Run the CLI directly from this repository:
+
+```bash
+node bin/trellis-kit.js --help
+node bin/trellis-kit.js init --dry-run
 ```
 
 ## Install Into a Project
@@ -68,25 +102,25 @@ Example setup flow:
 ```bash
 cd your-project
 trellis init -u amin --claude --codex
-trellis-codex-review-kit init
+trellis-kit init
 ```
 
 Preview without writing:
 
 ```bash
-trellis-codex-review-kit init --dry-run
+trellis-kit init --dry-run
 ```
 
 If you intentionally want to reinstall during init and overwrite existing files:
 
 ```bash
-trellis-codex-review-kit init --force
+trellis-kit init --force
 ```
 
 Preview overwrite actions without writing:
 
 ```bash
-trellis-codex-review-kit init --force --dry-run
+trellis-kit init --force --dry-run
 ```
 
 For routine updates to already installed kit files, use `update` instead of `init --force`; see [Updating Installed Files](#updating-installed-files).
@@ -258,7 +292,7 @@ The installed workflow tells Claude Code:
 Use `update` when the kit is already installed in a project and you want to refresh the installed templates from the current package version:
 
 ```bash
-trellis-codex-review-kit update
+trellis-kit update
 ```
 
 `update` overwrites installed kit files with the packaged templates. Review local customizations before running it.
@@ -266,7 +300,7 @@ trellis-codex-review-kit update
 If you are migrating from a version that installed review scripts under `.trellis/scripts/` or `.trellis/spec/scripts/`, or old renamed Review Handoff templates under `.trellis/spec/`, explicitly prune those old files after installing the current files:
 
 ```bash
-trellis-codex-review-kit update --prune-old
+trellis-kit update --prune-old
 ```
 
 `--prune-old` deletes only these legacy files when they exist:
@@ -287,8 +321,8 @@ trellis-codex-review-kit update --prune-old
 Use dry run first when unsure:
 
 ```bash
-trellis-codex-review-kit update --dry-run
-trellis-codex-review-kit update --dry-run --prune-old
+trellis-kit update --dry-run
+trellis-kit update --dry-run --prune-old
 ```
 
 ## Migration Notes
@@ -324,15 +358,15 @@ The installer warns about missing `.trellis`, but it does not fail because some 
 
 ```bash
 npm install -g .
-trellis-codex-review-kit --help
-trellis-codex-review-kit --version
+trellis-kit --help
+trellis-kit --version
 
-rm -rf /tmp/tcrk-test
-mkdir /tmp/tcrk-test
-cd /tmp/tcrk-test
+rm -rf /tmp/trellis-kit-test
+mkdir /tmp/trellis-kit-test
+cd /tmp/trellis-kit-test
 git init
 mkdir -p .trellis .claude
-trellis-codex-review-kit init
+trellis-kit init
 
 test -f .trellis/spec/guides/review-handoff-workflow.md
 test -f .trellis/spec/templates/review-handoff-template.md

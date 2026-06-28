@@ -222,11 +222,11 @@ Old workflow files likely to deprecate:
 
 Old concepts likely to deprecate:
 
-- `Codex Review Gate`
-- `Automatic Codex Review`
-- `Mandatory Codex Review`
-- `Review Handoff Gate`
-- `Review Handoff Decision Gate`
+- mandatory external-review gates
+- automatic external-review execution
+- mandatory Review Handoff requirements
+- Review Handoff gate wording
+- Review Handoff decision gate wording
 - `automatic P0/P1 fix`
 - `automatic re-review`
 - `Review Handoff replaces Trellis check`
