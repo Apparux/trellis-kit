@@ -1,6 +1,6 @@
 # /task
 
-Continue a specific existing Trellis task by directory name or suffix.
+Use `/task <task-id>` as the Trellis big-task entrypoint for an existing task. It resolves or switches to the requested task, makes the development-location decision before implementation, then continues through native `/trellis:continue` phase routing.
 
 Usage:
 
@@ -9,53 +9,52 @@ Usage:
 /task school-operation-log
 ```
 
-The text after `/task` is the target task id. This command is a continuation shortcut, not a task-creation command.
+The text after `/task` is the target task id. This command does not create a new Trellis task.
 
 ## Required Reading
 
-When continuing a full Trellis task, read `.trellis/spec/guides/review-handoff-workflow.md` before the post-check decision point.
+Before task routing and development-location decisions, read only:
 
-## Required Behavior
+1. `.trellis/spec/guides/development-location-decision.md`
+
+Do not load all of `.trellis/spec/` by default. Let Trellis context, phase routing, task artifacts, and spec indexes select any additional project rules later.
+
+## Resolve The Task
 
 For every `/task <task-id>` request:
 
 1. Treat `$ARGUMENTS` as the target task id. If it is empty, ask the user for a task id and stop.
-2. Do not create a new Trellis task.
-3. Do not re-plan by default. Re-enter planning only when required artifacts are missing or the task status/artifacts are inconsistent.
-4. Do not run push, merge, rebase, or `/trellis:finish-work` unless the user explicitly authorizes it.
-
-## Locate the Task
-
-1. Check the current active task:
+2. Check the current active task:
 
    ```bash
    python3 ./.trellis/scripts/task.py current --source
    ```
 
-   If the active task path basename equals the target id, or the basename ends with `-<target-id>`, keep the current active task and continue.
+   If the active task path basename equals the target id, or the basename ends with `-<target-id>`, keep the current active task.
 
-2. If the current active task does not match, list active tasks:
+3. If the current active task does not match, list active tasks:
 
    ```bash
    python3 ./.trellis/scripts/task.py list
    ```
 
-   Look for an exact directory-name match under `.trellis/tasks/` first. If no exact match exists, allow a suffix match where the directory basename ends with `-<target-id>`, such as `school-operation-log` matching `06-24-school-operation-log`.
+   Search `.trellis/tasks/` by exact directory-name match first. If no exact match exists, allow a suffix match where the directory basename ends with `-<target-id>`.
 
-3. If no active task matches, inspect archived tasks:
+4. If no active task matches, inspect archived tasks:
 
    ```bash
    python3 ./.trellis/scripts/task.py list-archive
    ```
 
-   Search under `.trellis/tasks/archive/<YYYY-MM>/` using the same exact-name first, suffix-match second rule.
+   Search `.trellis/tasks/archive/<YYYY-MM>/` with the same exact-name first, suffix-match second rule.
 
-4. If there are multiple matches, list the matches and stop for user clarification.
-5. If no match exists, say `Task not found: <target-id>` and stop.
+5. If multiple matches exist, list the matches and stop for user clarification.
+6. If no match exists, say `Task not found: <target-id>` and stop.
+7. If the only match is archived and its `task.json` status is `completed`, report that the task is archived/completed and stop unless the user explicitly asks to reopen or continue completed work.
 
 ## Switch Context
 
-When exactly one matching task is found and it is not already active, set it as the current task:
+When exactly one matching non-current, non-completed task is resolved, set it as the current task:
 
 ```bash
 python3 ./.trellis/scripts/task.py start <resolved-task-path>
@@ -63,97 +62,94 @@ python3 ./.trellis/scripts/task.py start <resolved-task-path>
 
 Use the resolved path from `.trellis/tasks/...` or `.trellis/tasks/archive/<YYYY-MM>/...`.
 
-If the only match is archived and its `task.json` status is `completed`, report that the task is archived/completed and stop unless the user explicitly asks to reopen or continue completed work.
+## Load Trellis Context
 
-## Continue Flow
+After confirming or switching the active task, load native Trellis context and phase routing:
 
-After confirming or switching the active task, continue using the Trellis continue flow:
+```bash
+python3 ./.trellis/scripts/get_context.py
+python3 ./.trellis/scripts/get_context.py --mode phase
+```
 
-1. Load current context:
+Determine the active task phase/status and whether implementation has started. Load the specific phase step before taking action:
 
-   ```bash
-   python3 ./.trellis/scripts/get_context.py
-   ```
+```bash
+python3 ./.trellis/scripts/get_context.py --mode phase --step <X.X> --platform claude
+```
 
-2. Load the phase index:
+## Development Location Decision
 
-   ```bash
-   python3 ./.trellis/scripts/get_context.py --mode phase
-   ```
+Worktree decisions happen only in `/task`, before implementation.
 
-3. Route by task status and artifacts, following `/trellis:continue`:
-   - `planning` with missing required artifacts: stop and explain which artifact is missing.
-   - `planning` with sufficient artifacts: continue to the activation/start review step before implementation.
-   - `in_progress`: continue to implementation or quality check according to artifact/code state.
-   - `completed`: report that the task is completed and stop unless the user explicitly asks for follow-up work.
+If the task has not yet entered implementation, ask this exact decision before creating a worktree, switching branches, starting implementation, or modifying code:
 
-4. Load the specific phase step before taking action:
+```text
+当前 task 是：<task-id>
+当前阶段是：<phase>
 
-   ```bash
-   python3 ./.trellis/scripts/get_context.py --mode phase --step <X.X> --platform claude
-   ```
+请选择开发位置：
 
-## Post-Check Review Handoff Decision
+A. 在当前分支 / 当前工作区继续
+B. 创建或切换到任务专用 worktree：.worktrees/<task-id>
 
-For an in-progress full Trellis task resumed through `/task`, continue implementation and Trellis native check as usual. After implementation and Trellis native check are complete, ask whether to generate a Review Handoff Markdown file for optional manual external review before final summary or finish-style wrap-up.
+如果选择 B，将使用分支：
+task/<task-id>
+```
 
-Ask:
+Before asking, inspect and show the context required by `.trellis/spec/guides/development-location-decision.md`: current task, current phase/status, current branch, current working directory, `git worktree list`, working-tree dirty state, whether `.gitignore` contains `.worktrees/`, and whether uncommitted Trellis planning/design/task artifacts exist.
 
-> 实现和 Trellis 内置 check 已完成。请选择后续处理方式：
->
-> A. 不生成 Review Handoff，只输出实现总结
-> B. 生成 Review Handoff Markdown，稍后我手动决定是否交给 Codex / Claude / 人工 reviewer
-> C. 暂不生成，稍后再说
-
-If the user chooses A:
-
-* Do not generate a Review Handoff.
-* Return final implementation summary.
-* Include changed files, checks run, and remaining risks.
+If the user chooses A, continue in the current branch/current working directory.
 
 If the user chooses B:
 
-* Generate the Review Handoff Markdown according to `.trellis/spec/guides/review-handoff-workflow.md`.
-* Return the generated file path.
-* Do not run any reviewer.
-* Do not run Codex.
-* Do not run Claude.
-* Do not run review scripts.
+1. Use only `.worktrees/<task-id>`.
+2. Use only branch `task/<task-id>`.
+3. Before creating the task worktree, verify `.gitignore` contains `.worktrees/`.
+4. If `.gitignore` does not contain `.worktrees/`, ask before adding it.
+5. Prompt the user about uncommitted Trellis planning/design/task artifacts before creating the worktree.
+6. Do not automatically create `.worktrees/` except as part of creating the user-selected task worktree.
+7. Do not modify target-project `.gitignore` without explicit confirmation.
 
-If the user chooses C:
+If implementation has already started and code is dirty, default to continuing in the current workspace unless the user explicitly asks to move. If the user insists on switching to a worktree, remind them that uncommitted code changes must be migrated manually or committed before they will appear in the new worktree.
 
-* Do not generate a Review Handoff.
-* Explain that the user can request it later.
+Do not create worktrees in `.trellis/worktrees/`, `../<repo>-worktrees/`, `../<repo>-<task-id>`, or `/tmp/`.
 
-The agent must not automatically run:
+## Continue Native Trellis Flow
 
-* `codex`
-* `claude`
-* any review script
-* any external reviewer command
+After the requested task is active and the development location is chosen when required, continue native Trellis flow:
 
-The user decides:
+```text
+/trellis:continue
+```
 
-* whether to generate a Review Handoff
-* whether to do external review
-* when to review
-* who or what tool reviews it
-* whether to apply review findings
+Route by task status and artifacts:
+
+- `planning` with missing required artifacts: stop and explain which artifact is missing.
+- `planning` with sufficient artifacts: continue the Trellis activation/start review step only after any required development-location decision is complete.
+- `in_progress`: continue implementation or quality check according to the Trellis phase and current code state.
+- `completed`: report that the task is completed and stop unless the user explicitly asks for follow-up work.
+
+Do not automatically generate Review Handoff Markdown. The user may request `/handoff` manually when they want a handoff document.
 
 ## Forbidden
 
 Unless the user explicitly authorizes it in the current conversation, `/task` must not automatically:
 
-* Create a new task
-* Re-plan when existing task status and artifacts are consistent
-* Run Codex Review
-* Run Claude Review
-* Run any external reviewer
-* Run review scripts
-* Fix P0/P1 findings from external review
-* Re-review
-* Commit
-* Push
-* Merge
-* Rebase
-* Run finish-work
+- Create a new task
+- Re-plan when existing task status and artifacts are consistent
+- Load all of `.trellis/spec/` by default
+- Create a worktree before the user chooses a development location
+- Switch branches before the user chooses a development location
+- Start implementation before the user chooses a development location when the decision applies
+- Generate Review Handoff Markdown
+- Run Codex Review
+- Run Claude Review
+- Run any external reviewer
+- Run review scripts
+- Fix external-review findings
+- Re-review
+- Commit
+- Push
+- Merge
+- Rebase
+- Run finish-work

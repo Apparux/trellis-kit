@@ -53,7 +53,7 @@ The agent may automatically:
 - Merge missing constraints that match current approved behavior.
 - Update stale command references.
 - Update references from old files to canonical files.
-- Remove stale broad spec-loading wording from `/dev`, `/fix`, and `/spec-cleanup` while preserving Trellis-native context selection.
+- Remove stale broad spec-loading wording from `/task`, `/fix`, and `/spec-cleanup` while preserving Trellis-native context selection.
 
 ## Duplicate Merge Process
 
@@ -136,7 +136,7 @@ Do not:
 - Merge active guides in a way that changes behavior without user confirmation.
 - Rewrite active guide behavior without user confirmation.
 - Treat archived specs as active rules.
-- Run `/dev`.
+- Run `/task`.
 - Run `/fix`.
 - Run Codex Review.
 - Run Claude Review.

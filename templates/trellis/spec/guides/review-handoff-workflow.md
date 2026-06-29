@@ -6,24 +6,27 @@ Review Handoff Markdown is an optional handoff document for manual external revi
 
 It can be used with:
 
-* Codex
-* Claude
-* Human reviewers
-* Other code review tools
-* The user's own review process
+- Codex
+- Claude
+- Human reviewers
+- Other code review tools
+- The user's own review process
 
-## Relationship with Trellis Check
+## Relationship With Trellis Check
 
-Trellis native check is the default verification mechanism for full `/dev` tasks.
+Trellis native check is the default verification mechanism for full `/task <task-id>` work.
 
 Review Handoff Markdown is not a replacement for Trellis check. It is a handoff document for optional external review.
 
-The default `/dev` flow is:
+The default full-task flow is:
 
-1. Implement the Trellis task.
-2. Run native Trellis check.
-3. Ask whether to generate Review Handoff Markdown.
-4. Stop and let the user decide any external review.
+1. Continue the Trellis task with `/task <task-id>`.
+2. Implement the task.
+3. Run native Trellis check.
+4. Ask whether to generate Review Handoff Markdown.
+5. Stop and let the user decide any external review.
+
+The manual `/handoff` command may also generate the same Markdown artifact when the user asks for it directly.
 
 ## Optional Handoff Policy
 
@@ -43,7 +46,7 @@ The agent must respect the user's choice.
 
 Running external review is optional and user-controlled.
 
-The agent must not automatically invoke Codex Review, Claude Review, or any external reviewer from `/dev`.
+The agent must not automatically invoke Codex Review, Claude Review, review scripts, or any external reviewer from `/task` or `/handoff`.
 
 The user may manually choose one of the following:
 
@@ -58,19 +61,19 @@ The user may manually choose one of the following:
 
 Review Handoff Markdown must include:
 
-* Task
-* Task path
-* Implementation summary
-* Changed files
-* API changes
-* Database changes
-* Permission/data-scope changes
-* Configuration changes
-* Checks performed
-* Known limitations and risks
-* Review focus
-* Git diff scope
-* Suggested review prompt
+- Task
+- Task path
+- Implementation summary
+- Changed files
+- API changes
+- Database changes
+- Permission/data-scope changes
+- Configuration changes
+- Checks performed
+- Known limitations and risks
+- Review focus
+- Git diff scope
+- Suggested review prompt
 
 ## External Review Tooling
 
@@ -84,14 +87,14 @@ No command automatically runs external review.
 
 The agent must not automatically:
 
-* Run Codex Review
-* Run Claude Review
-* Run any external reviewer
-* Run review scripts
-* Fix P0/P1 findings from external review
-* Re-review
-* Commit
-* Push
-* Merge
-* Rebase
-* Run finish-work
+- Run Codex Review
+- Run Claude Review
+- Run any external reviewer
+- Run review scripts
+- Fix P0/P1 findings from external review
+- Re-review
+- Commit
+- Push
+- Merge
+- Rebase
+- Run finish-work

@@ -1,10 +1,13 @@
 # Trellis Kit
 
-Trellis Kit installs Trellis workflow guides, Claude commands, and optional review handoff tooling for AI-assisted development.
+Trellis Kit does not replace Trellis native workflow. It adds focused Claude commands around it:
 
-It is a small Node.js CLI package with no runtime dependencies. It does not replace Trellis, Claude Code, or Codex CLI. It only copies versionable project files so Claude Code can implement work following the Trellis workflow, with optional Review Handoff for manual external review. Optional Codex review remains user-controlled and manual.
+- `/task <task-id>`: switch/start/continue a Trellis task and decide the development location before implementation.
+- `/fix <request>`: lightweight fast path for small fixes.
+- `/handoff`: manually generate Review Handoff Markdown when requested.
+- `/spec-cleanup`: automatically clean, archive, deprecate, and consolidate `.trellis/spec/`.
 
-This kit is local-only. It does not create GitHub Actions, does not push, does not merge, and does not run Codex Review during installation.
+It is a small Node.js CLI package with no runtime dependencies. This kit is local-only. It does not create GitHub Actions, does not push, does not merge, and does not run Codex Review during installation.
 
 [中文 README](README.zh-CN.md)
 
@@ -35,7 +38,7 @@ trellis-kit
 
 ## What It Installs
 
-Running `trellis-kit init` installs the Markdown templates and Claude command templates:
+Running `trellis-kit init` installs Markdown templates and Claude command templates:
 
 ```text
 .trellis/spec/guides/review-handoff-workflow.md
@@ -43,9 +46,9 @@ Running `trellis-kit init` installs the Markdown templates and Claude command te
 .trellis/spec/guides/development-location-decision.md
 .trellis/spec/guides/fast-path-change-policy.md
 .trellis/spec/guides/spec-cleanup-guide.md
-.claude/commands/dev.md
 .claude/commands/task.md
 .claude/commands/fix.md
+.claude/commands/handoff.md
 .claude/commands/spec-cleanup.md
 ```
 
@@ -128,66 +131,44 @@ For routine updates to already installed kit files, use `update` instead of `ini
 By default, `init` skips existing files:
 
 ```text
-SKIP existing: .claude/commands/dev.md
+SKIP existing: .claude/commands/task.md
 ```
 
 ## Daily Workflow
 
-### `/dev` — Full Trellis Workflow
+### `/task <task-id>` — Full Trellis Task Entrypoint
 
-`/dev` runs the full Trellis workflow. Before implementation, it asks whether to develop in the current working tree or in a task-specific worktree under `.worktrees/<task-id>`. After implementation, it follows the native Trellis check flow. Then it asks whether to generate a Review Handoff Markdown file for optional manual external review. It does not automatically run Codex Review, Claude Review, or any reviewer.
-
-Start new feature work in Claude Code:
-
-```text
-/dev 新需求：实现 xxx
-/dev 实现 xxx
-/dev 帮我实现 xxx，并更新相关测试
-```
-
-For `/dev` requests, Claude Code should:
-
-1. Read `.trellis/workflow.md` and relevant rules selected by the Trellis workflow, task context, or spec indexes.
-2. Check whether the request qualifies for Fast Path; if so, suggest `/fix` instead.
-3. Create or confirm a Trellis task.
-4. Write the task PRD/design/implementation artifacts required by Trellis.
-5. Ask the user to choose development location: current workspace or `.worktrees/<task-id>`.
-6. Implement the task.
-7. Run Trellis native check.
-8. Ask whether to generate Review Handoff Markdown.
-9. Stop — the user decides whether to review, commit, push, or finish-work.
-
-### `/fix` — Fast Path Fix
-
-`/fix` is for small bug fixes, small adjustments, and low-risk patches. It does not create a full Trellis task, does not create PRD/DESIGN/TASK documents, does not generate a Review Handoff by default, does not commit, and does not run review by default.
-
-```text
-/fix 修复学生档案导出时手机号为空导致 NPE 的问题
-/fix 学生档案列表里班级名称字段现在返回 classId，改成返回 className
-```
-
-### `/task` — Continue Existing Task
-
-Continue a specific existing Trellis task by directory name or suffix:
+Use `/task <task-id>` for prepared Trellis tasks. It resolves the current or requested task, switches only after exactly one match is found, reads the development-location guide, asks whether to use the current workspace or `.worktrees/<task-id>` before implementation when needed, and then continues native `/trellis:continue` phase routing.
 
 ```text
 /task 06-24-school-operation-log
 /task school-operation-log
 ```
 
-When `/task` resumes an in-progress full Trellis task, it preserves the same post-check Review Handoff decision as `/dev`: after implementation and Trellis native check, it asks whether to skip, generate now, or generate later. It does not automatically run reviewers or review scripts.
+`/task` does not create a new task, does not load all of `.trellis/spec/` by default, does not automatically generate Review Handoff, and does not review, commit, push, merge, rebase, or finish-work.
 
-### `/trellis:continue` — Continue Interrupted Work
+### `/fix <request>` — Fast Path Fix
 
-Continue work with the current active task:
+Use `/fix` for small bug fixes, small adjustments, and low-risk patches in the current workspace. It does not create a full Trellis task, does not create PRD/DESIGN/TASK documents, does not generate Review Handoff by default, does not commit, and does not run review by default.
 
 ```text
-/trellis:continue
+/fix 修复学生档案导出时手机号为空导致 NPE 的问题
+/fix 学生档案列表里班级名称字段现在返回 classId，改成返回 className
 ```
 
-## /spec-cleanup
+### `/handoff` — Manual Review Handoff
 
-`/spec-cleanup` automatically audits, safely organizes, and consolidates `.trellis/spec/`. It keeps active guides, archives historical task specs, deprecates replaced workflow rules, merges low-risk duplicate specs into canonical guides, updates references to canonical files, and removes stale broad spec-loading wording without overriding Trellis-native context selection. It asks for confirmation before destructive, ambiguous, conflicting, or behavior-changing actions such as deletion, merging conflicting rules, rewriting core rules, or moving files whose purpose is unclear.
+Use `/handoff` when you want Claude Code to generate a Review Handoff Markdown file for the active Trellis task.
+
+```text
+/handoff
+```
+
+It confirms the active task, reads the handoff workflow guide and template, collects changed files, checks, risks, and summary information, writes the Markdown handoff, and returns the path. It does not run reviewers or commit.
+
+### `/spec-cleanup` — Spec Cleanup
+
+`/spec-cleanup` automatically audits, safely organizes, and consolidates `.trellis/spec/`. It keeps active guides, archives historical task specs, deprecates replaced workflow rules, merges low-risk duplicate specs into canonical guides, updates references to canonical files, and removes stale broad spec-loading wording without overriding Trellis-native context selection. It asks for confirmation before destructive, ambiguous, conflicting, or behavior-changing actions.
 
 ```text
 /spec-cleanup
@@ -195,35 +176,25 @@ Continue work with the current active task:
 
 ## Selective Spec Loading
 
-Commands should not blindly load the entire `.trellis/spec/` directory by default. `/dev` and `/fix` rely on the native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/spec-cleanup` reads its cleanup guide first, then lists and selectively analyzes `.trellis/spec/` for cleanup decisions.
+Commands should not blindly load the entire `.trellis/spec/` directory by default. `/task` and `/fix` rely on native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/spec-cleanup` reads its cleanup guide first, then lists and selectively analyzes `.trellis/spec/` for cleanup decisions.
 
 ## Development Location
 
-Before implementation for a full `/dev` task, the user chooses:
+Worktree selection happens inside `/task`, before implementation.
 
-1. Current branch / current working tree
-2. Task-specific git worktree
-
-If a worktree is chosen, the fixed path is:
+If the user chooses a task-specific worktree, Trellis Kit uses:
 
 ```text
 .worktrees/<task-id>
 ```
 
-The fixed branch name is:
+with branch:
 
 ```text
 task/<task-id>
 ```
 
-Example:
-
-```text
-.worktrees/06-23-customer-safety-education
-task/06-23-customer-safety-education
-```
-
-The agent shows status and provides a recommendation, but the user makes the final decision.
+Before creating a task worktree, the agent verifies `.gitignore` contains `.worktrees/`; if missing, it asks before adding it. If Trellis planning/design/task artifacts are uncommitted, it warns before creating the worktree. If implementation has already started and code is dirty, it defaults to continuing the current workspace.
 
 Worktrees must not be created in:
 
@@ -234,27 +205,11 @@ Worktrees must not be created in:
 /tmp/
 ```
 
-It is recommended that the target project `.gitignore` includes:
-
-```gitignore
-.worktrees/
-```
-
 ## Review Handoff
 
 Review Handoff Markdown is an optional handoff document for manual external review. It is not a replacement for Trellis native check.
 
-Generating a Review Handoff does not imply automatic review.
-
-The user may choose to:
-
-* Skip and only receive an implementation summary
-* Generate and review personally
-* Generate and hand off to Codex
-* Generate and hand off to Claude
-* Generate and hand off to a human reviewer
-* Generate and use other tools
-* Generate later
+Generating a Review Handoff does not imply automatic review. The user may choose to skip, generate and review personally, hand off to Codex, hand off to Claude, send to a human reviewer, use another tool, or generate later.
 
 ## Manual External Review
 
@@ -273,6 +228,7 @@ The installer does not:
 - Install Trellis, Claude Code, or Codex CLI.
 - Run Codex Review during installation.
 - Delete files by default; only `update --prune-old` deletes the documented legacy review scripts under `.trellis/scripts/` and `.trellis/spec/scripts/`, plus old renamed templates under `.trellis/spec/`.
+- Delete older target-project Claude command files.
 - Overwrite files unless `--force` is used with `init` or `update` is used intentionally.
 - Push, merge, or rebase.
 - Modify remote repositories.
@@ -281,7 +237,7 @@ The installer does not:
 
 The installed workflow tells Claude Code:
 
-- Claude Code implements and fixes.
+- Claude Code implements prepared tasks and fixes.
 - Trellis native check is the default verification.
 - Review Handoff is optional and user-controlled.
 - External review is user-controlled.
@@ -326,6 +282,10 @@ trellis-kit update --dry-run --prune-old
 ```
 
 ## Migration Notes
+
+### Claude Command Surface
+
+Older versions may have installed `.claude/commands/dev.md`. Remove it manually if it exists.
 
 ### File Renames (v0.5.0)
 
@@ -373,8 +333,8 @@ test -f .trellis/spec/templates/review-handoff-template.md
 test -f .trellis/spec/guides/development-location-decision.md
 test -f .trellis/spec/guides/fast-path-change-policy.md
 test -f .trellis/spec/guides/spec-cleanup-guide.md
-test -f .claude/commands/dev.md
 test -f .claude/commands/task.md
 test -f .claude/commands/fix.md
+test -f .claude/commands/handoff.md
 test -f .claude/commands/spec-cleanup.md
 ```

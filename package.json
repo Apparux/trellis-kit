@@ -1,7 +1,7 @@
 {
   "name": "trellis-kit",
-  "version": "1.0.0",
-  "description": "Trellis workflow templates and Claude commands for dev, fix, review handoff, and spec cleanup.",
+  "version": "2.0.0",
+  "description": "Trellis workflow templates and Claude commands for task continuation, fixes, review handoff, and spec cleanup.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Apparux/trellis-kit.git"

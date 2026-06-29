@@ -12,16 +12,17 @@ This project is managed by Trellis. The working knowledge you need lives under `
 
 ## Commands
 
-- `/dev` — full Trellis workflow for new features and complex changes
-- `/fix` — fast path for small bug fixes and low-risk patches
-- `/task <id>` — continue a specific existing Trellis task
+- `/task <id>` — continue or implement a prepared Trellis task
+- `/fix <request>` — fast path for small bug fixes and low-risk patches
+- `/handoff` — manually generate Review Handoff Markdown for the active task
+- `/spec-cleanup` — safely audit and consolidate `.trellis/spec/`
 - `/trellis:continue` — continue the current active task
 - `/trellis:finish-work` — finish the current task
 
 ## Key Guides
 
-- `.trellis/spec/guides/development-location-decision.md` — worktree vs current workspace
-- `.trellis/spec/guides/fast-path-change-policy.md` — when to use `/fix` vs `/dev`
+- `.trellis/spec/guides/development-location-decision.md` — worktree vs current workspace for `/task`
+- `.trellis/spec/guides/fast-path-change-policy.md` — when to use `/fix` instead of full task work
 - `.trellis/spec/guides/review-handoff-workflow.md` — optional Review Handoff generation
 
 If a Trellis command is available on your platform (e.g. `/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps. Not every platform exposes every command.

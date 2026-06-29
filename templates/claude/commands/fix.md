@@ -42,7 +42,7 @@ Before editing:
 2. Check current working directory.
 3. Check whether there are uncommitted changes.
 4. Stay in the current workspace for `/fix`.
-5. If the workspace has unrelated changes or the fix is risky, stop and explain that the request should use `/dev` or be retried after the workspace is clean.
+5. If the workspace has unrelated changes or the fix is risky, stop and explain that the request should use `/task <task-id>` for a prepared full Trellis task, or be retried after the workspace is clean.
 
 ## Implementation Rule
 

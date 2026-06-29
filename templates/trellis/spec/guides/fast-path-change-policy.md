@@ -82,7 +82,7 @@ For Fast Path Fix, continue only when:
 * The current branch/current workspace is appropriate
 * There are no unrelated uncommitted changes that would make the fix unsafe
 
-If the workspace has unrelated changes or the fix is risky, stop and explain that the request should use the full `/dev` workflow or be retried after the workspace is clean.
+If the workspace has unrelated changes or the fix is risky, stop and explain that the request should use `/task <task-id>` for a prepared full Trellis task, or be retried after the workspace is clean.
 
 ## Forbidden
 

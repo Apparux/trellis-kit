@@ -32,16 +32,16 @@ const templateFiles = [
     to: ".trellis/spec/guides/spec-cleanup-guide.md",
   },
   {
-    from: "templates/claude/commands/dev.md",
-    to: ".claude/commands/dev.md",
-  },
-  {
     from: "templates/claude/commands/task.md",
     to: ".claude/commands/task.md",
   },
   {
     from: "templates/claude/commands/fix.md",
     to: ".claude/commands/fix.md",
+  },
+  {
+    from: "templates/claude/commands/handoff.md",
+    to: ".claude/commands/handoff.md",
   },
   {
     from: "templates/claude/commands/spec-cleanup.md",
@@ -235,14 +235,17 @@ function printNextSteps(command, dryRun) {
   console.log(`\n${verb}
 
 Next steps:
-1. Start new feature work in Claude Code:
-   /dev <requirement description>
+1. Continue or implement a prepared Trellis task in Claude Code:
+   /task <task-id>
 
 2. Start a small bug fix or patch in Claude Code:
    /fix <bug description>
 
-3. Continue interrupted work:
-   /trellis:continue`);
+3. Generate a manual Review Handoff when needed:
+   /handoff
+
+4. Clean up Trellis specs when needed:
+   /spec-cleanup`);
 }
 
 function installTemplates(command, options) {
@@ -254,7 +257,7 @@ function installTemplates(command, options) {
 
   warnIfMissing(targetRoot, ".git", "Trellis workflow files are intended for use inside a git project.");
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
-  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /dev and /fix commands available.");
+  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /task, /fix, /handoff, and /spec-cleanup commands available.");
 
   if (command === "init" && options.pruneOld) {
     throw new Error("--prune-old can only be used with update");
