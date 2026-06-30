@@ -5,6 +5,8 @@ Trellis Kit 不替代 Trellis 原生工作流，只补充几个聚焦的 Claude 
 - `/task <task-id>`：切换/启动/继续 Trellis task，并在 implementation 前决定开发位置。
 - `/fix <request>`：小 bug、小改动的快车道。
 - `/handoff`：用户需要时手动生成 Review Handoff Markdown。
+- `/review-fix <review-md>`：根据 Codex、Claude 或人工 review markdown 修复 P0/P1 问题。
+- `/rereview <review-md>`：修复后生成 re-review 请求，交给 reviewer 复查。
 - `/spec-cleanup`：自动整理、归档、废弃并合并 `.trellis/spec/`。
 
 它是一个无运行时依赖的小型 Node.js CLI 包。这个工具只在本地工作。安装过程不会创建 GitHub Actions，不会 push，不会 merge，也不会运行 Codex Review。
@@ -46,6 +48,7 @@ trellis-kit
 
 ```text
 .trellis/spec/guides/review-handoff-workflow.md
+.trellis/spec/guides/review-loop-workflow.md
 .trellis/spec/templates/review-handoff-template.md
 .trellis/spec/guides/development-location-decision.md
 .trellis/spec/guides/fast-path-change-policy.md
@@ -53,6 +56,8 @@ trellis-kit
 .claude/commands/task.md
 .claude/commands/fix.md
 .claude/commands/handoff.md
+.claude/commands/review-fix.md
+.claude/commands/rereview.md
 .claude/commands/spec-cleanup.md
 ```
 
@@ -170,6 +175,26 @@ SKIP existing: .claude/commands/task.md
 
 它会确认 active task，读取 handoff workflow guide 和 template，收集 changed files、checks、risks 和 summary，写出 Markdown handoff 并返回路径。`/handoff` 会生成包含 Review Scope 和 Suggested Review Prompt 的 Review Handoff Markdown。默认 Review Scope 是当前本地工作区改动，包括 staged、unstaged，以及与任务相关的 untracked 新文件。它不会运行 reviewer，也不会 commit。
 
+### `/review-fix <review-md>` — Review 问题修复
+
+使用 `/review-fix <review-md>` 根据 Codex、Claude、人工或其他外部 reviewer 输出的 review markdown 修复 P0/P1 问题。
+
+```text
+/review-fix .trellis/tasks/06-23-customer-safety-education/reviews/codex-review.md
+```
+
+`/review-fix` 会读取 review markdown 和 review loop guide，只修复 review markdown 明确指出的问题，运行 targeted checks，并写出 `review-fix-summary.md`。它不会自动调用 reviewer，不会 commit，并且默认不自动修复 P2，除非用户明确要求。
+
+### `/rereview <review-md>` — Re-review 请求
+
+使用 `/rereview <review-md>` 在 `/review-fix` 修复后生成聚焦的 re-review 请求。
+
+```text
+/rereview .trellis/tasks/06-23-customer-safety-education/reviews/codex-review.md
+```
+
+`/rereview` 会读取原始 review markdown、review loop guide 和 review fix summary，然后写出 `rereview-request.md`。它只准备 re-review 材料，不会自动调用 Codex、Claude Review、人工 reviewer 或任何外部 reviewer。
+
 ### `/spec-cleanup` — Spec 清理
 
 `/spec-cleanup` 会自动审查、安全整理并整合 `.trellis/spec/`。它会保留当前有效规则，自动归档历史任务文档，自动废弃已被替代的旧流程规则，把低风险重复 spec 自动合并到 canonical guide，更新旧引用到 canonical 文件，并移除过时的全量读取 spec 写法，但不覆盖 Trellis 原生 context 选择。只有在删除、歧义、冲突或会改变核心行为的操作时才会询问确认。
@@ -178,9 +203,9 @@ SKIP existing: .claude/commands/task.md
 /spec-cleanup
 ```
 
-## Selective Spec Loading
+## 选择性 Spec 加载
 
-命令不应默认盲目全量读取 `.trellis/spec/`。`/task` 和 `/fix` 交给 Trellis 原生 workflow、task context 和 spec index 判断哪些项目规则相关；`/spec-cleanup` 会先读取 cleanup guide，再列出并按清理决策需要选择性分析 `.trellis/spec/`。
+命令不应默认盲目全量读取 `.trellis/spec/`。`/task` 和 `/fix` 交给 Trellis 原生 workflow、task context 和 spec index 判断哪些项目规则相关；`/handoff`、`/review-fix`、`/rereview` 和 `/spec-cleanup` 会先读取自己的目标 guide，再按命令需要检查相关文件。
 
 ## 开发位置选择
 
@@ -209,7 +234,7 @@ task/<task-id>
 /tmp/
 ```
 
-## Review Handoff
+## Review Handoff 与 Review 闭环
 
 Review Handoff Markdown 是可选外部审查交接材料，不是 Trellis check 的替代品。
 
@@ -217,11 +242,22 @@ Review Handoff Markdown 是可选外部审查交接材料，不是 Trellis check
 
 生成 Review Handoff 不代表会自动 review。用户可以选择不生成、生成后自己审查、交给 Codex、交给 Claude、发送给人工 reviewer、使用其他工具，或稍后再生成。
 
+推荐 review 闭环：
+
+1. 使用 `/handoff` 生成 review-handoff.md。
+2. 将 handoff 交给 Codex、Claude 或人工 reviewer。
+3. 将 review 结果保存到 `.trellis/tasks/<task-id>/reviews/`。
+4. 使用 `/review-fix <review-md>` 修复 P0/P1 问题。
+5. 使用 `/rereview <review-md>` 生成 re-review 请求。
+6. 手动将 re-review 请求交给 reviewer 复查。
+
+`/review-fix` 不自动调用 reviewer。`/rereview` 不自动调用 reviewer。P2 默认不自动修。所有外部 review 和 re-review 都由用户手动触发。
+
 ## 手动外部审查
 
 本 kit 不安装 bundled review 脚本。
 
-Review Handoff Markdown 是可移植的交接材料。用户可以把 Suggested Review Prompt 手动粘贴给 Codex、Claude、其他 reviewer，或发送给人工 reviewer。
+Review Handoff Markdown 和 Re-review Request Markdown 都是可移植的交接材料。用户可以把 Suggested Review Prompt 手动粘贴给 Codex、Claude、其他 reviewer，或发送给人工 reviewer。
 
 本 kit 中没有任何命令会自动运行外部 reviewer。
 
@@ -243,10 +279,11 @@ Review Handoff Markdown 是可移植的交接材料。用户可以把 Suggested 
 
 安装后的工作流会要求 Claude Code 遵守：
 
-- Claude Code 负责实现已准备好的 task 和小修复。
+- Claude Code 负责实现已准备好的 task、小修复和 review markdown 明确指出的问题。
 - Trellis 内置 check 是默认验证方式。
 - Review Handoff 是可选且由用户控制的。
-- 外部审查由用户控制。
+- 外部 review 和 re-review 由用户控制。
+- P2 默认不自动修。
 - 是否 commit、push、merge 或 finish-work 由用户决定。
 
 ## 更新已安装文件
@@ -335,6 +372,7 @@ mkdir -p .trellis .claude
 trellis-kit init
 
 test -f .trellis/spec/guides/review-handoff-workflow.md
+test -f .trellis/spec/guides/review-loop-workflow.md
 test -f .trellis/spec/templates/review-handoff-template.md
 test -f .trellis/spec/guides/development-location-decision.md
 test -f .trellis/spec/guides/fast-path-change-policy.md
@@ -342,5 +380,8 @@ test -f .trellis/spec/guides/spec-cleanup-guide.md
 test -f .claude/commands/task.md
 test -f .claude/commands/fix.md
 test -f .claude/commands/handoff.md
+test -f .claude/commands/review-fix.md
+test -f .claude/commands/rereview.md
 test -f .claude/commands/spec-cleanup.md
+test ! -f .claude/commands/dev.md
 ```

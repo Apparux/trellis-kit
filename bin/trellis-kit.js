@@ -16,6 +16,10 @@ const templateFiles = [
     to: ".trellis/spec/guides/review-handoff-workflow.md",
   },
   {
+    from: "templates/trellis/spec/guides/review-loop-workflow.md",
+    to: ".trellis/spec/guides/review-loop-workflow.md",
+  },
+  {
     from: "templates/trellis/spec/templates/review-handoff-template.md",
     to: ".trellis/spec/templates/review-handoff-template.md",
   },
@@ -42,6 +46,14 @@ const templateFiles = [
   {
     from: "templates/claude/commands/handoff.md",
     to: ".claude/commands/handoff.md",
+  },
+  {
+    from: "templates/claude/commands/review-fix.md",
+    to: ".claude/commands/review-fix.md",
+  },
+  {
+    from: "templates/claude/commands/rereview.md",
+    to: ".claude/commands/rereview.md",
   },
   {
     from: "templates/claude/commands/spec-cleanup.md",
@@ -244,7 +256,13 @@ Next steps:
 3. Generate a manual Review Handoff when needed:
    /handoff
 
-4. Clean up Trellis specs when needed:
+4. Apply P0/P1 fixes from saved review markdown:
+   /review-fix <review-md>
+
+5. Prepare a manual re-review request after fixes:
+   /rereview <review-md>
+
+6. Clean up Trellis specs when needed:
    /spec-cleanup`);
 }
 
@@ -257,7 +275,7 @@ function installTemplates(command, options) {
 
   warnIfMissing(targetRoot, ".git", "Trellis workflow files are intended for use inside a git project.");
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
-  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /task, /fix, /handoff, and /spec-cleanup commands available.");
+  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /task, /fix, /handoff, /review-fix, /rereview, and /spec-cleanup commands available.");
 
   if (command === "init" && options.pruneOld) {
     throw new Error("--prune-old can only be used with update");
