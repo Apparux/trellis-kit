@@ -1,46 +1,50 @@
 # Trellis Kit
 
-Trellis Kit does not replace Trellis native workflow. It adds focused Claude commands around it:
+Trellis Kit 不替代 Trellis 原生工作流，只补充几个聚焦的 Claude 命令：
 
-- `/task <task-id>`: switch/start/continue a Trellis task and decide the development location before implementation.
-- `/fix <request>`: lightweight fast path for small fixes.
-- `/handoff`: manually generate Review Handoff Markdown when requested.
-- `/review-fix <review-md>`: apply P0/P1 fixes from a Codex, Claude, or human review markdown.
-- `/rereview <review-md>`: prepare a re-review request after review fixes.
-- `/spec-cleanup`: automatically clean, archive, deprecate, and consolidate `.trellis/spec/`.
+- `/task <task-id>`：切换/启动/继续 Trellis task，并在 implementation 前决定开发位置。
+- `/fix <request>`：小 bug、小改动的快车道。
+- `/handoff`：用户需要时手动生成 Review Handoff Markdown。
+- `/review-fix <review-md>`：根据 Codex、Claude 或人工 review markdown 修复 P0/P1 问题。
+- `/rereview <review-md>`：修复后生成 re-review 请求，交给 reviewer 复查。
+- `/spec-cleanup`：自动整理、归档、废弃并合并 `.trellis/spec/`。
 
-It is a small Node.js CLI package with no runtime dependencies. This kit is local-only. It does not create GitHub Actions, does not push, does not merge, and does not run Codex Review during installation.
+它是一个无运行时依赖的小型 Node.js CLI 包。这个工具只在本地工作。安装过程不会创建 GitHub Actions，不会 push，不会 merge，也不会运行 Codex Review。
 
-[中文 README](README.zh-CN.md)
+[English README](README.en.md)
 
-## Rename Notice
+## 重命名说明
 
-This project was previously named `trellis-codex-review-kit`.
+本项目原名为 `trellis-codex-review-kit`，现已更名为 `trellis-kit`。
 
-The new package and CLI name is `trellis-kit`.
+新的 npm 包名和 CLI 命令均为：
 
-If you installed the old package globally, uninstall it first:
+```bash
+trellis-kit
+```
+
+如果你之前全局安装过旧包，请先卸载旧包：
 
 ```bash
 npm uninstall -g trellis-codex-review-kit
 npm install -g trellis-kit
 ```
 
-If your project still references the old command, replace:
+如果你的项目脚本中仍引用旧命令，请将：
 
 ```bash
 trellis-codex-review-kit
 ```
 
-with:
+替换为：
 
 ```bash
 trellis-kit
 ```
 
-## What It Installs
+## 安装内容
 
-Running `trellis-kit init` installs Markdown templates and Claude command templates:
+运行 `trellis-kit init` 会安装 Markdown 模板和 Claude 命令模板：
 
 ```text
 .trellis/spec/guides/review-handoff-workflow.md
@@ -57,55 +61,55 @@ Running `trellis-kit init` installs Markdown templates and Claude command templa
 .claude/commands/spec-cleanup.md
 ```
 
-The installed files should be committed into the target project so the workflow is stable, reviewable, and editable by the team.
+这些安装后的文件应该提交到目标项目中，这样工作流就能保持稳定、可审查，并且团队可以按需编辑。
 
-## Prerequisites
+## 前置条件
 
 - Node.js
 - git
 - Trellis
 - Claude Code
-- Codex CLI available as `codex` (optional; only needed if the user independently chooses to use Codex for manual external review)
+- 可通过 `codex` 命令访问的 Codex CLI（可选；仅在用户自行选择用 Codex 做手动外部审查时需要）
 
-## Install Package
+## 安装包
 
-From this package repository (local development install):
+在本包仓库中运行（本地开发安装）：
 
 ```bash
 npm install -g .
 ```
 
-From npm (remote install):
+从 npm 安装（远程安装）：
 
 ```bash
 npm install -g trellis-kit
 ```
 
-If you do not want a global install, you can also run the published CLI through `npx`:
+如果你不想全局安装，也可以通过 `npx` 直接运行已发布的 CLI：
 
 ```bash
 npx trellis-kit init
 ```
 
-Verify:
+验证：
 
 ```bash
 trellis-kit --help
 trellis-kit --version
 ```
 
-## Local Development
+## 本地开发
 
-Run the CLI directly from this repository:
+在本仓库中直接运行 CLI：
 
 ```bash
 node bin/trellis-kit.js --help
 node bin/trellis-kit.js init --dry-run
 ```
 
-## Install Into a Project
+## 安装到项目
 
-Example setup flow:
+示例初始化流程：
 
 ```bash
 cd your-project
@@ -113,115 +117,115 @@ trellis init -u amin --claude --codex
 trellis-kit init
 ```
 
-Preview without writing:
+只预览、不写文件：
 
 ```bash
 trellis-kit init --dry-run
 ```
 
-If you intentionally want to reinstall during init and overwrite existing files:
+如果你确实想在 init 时重新安装并覆盖已有文件：
 
 ```bash
 trellis-kit init --force
 ```
 
-Preview overwrite actions without writing:
+预览覆盖操作但不写文件：
 
 ```bash
 trellis-kit init --force --dry-run
 ```
 
-For routine updates to already installed kit files, use `update` instead of `init --force`; see [Updating Installed Files](#updating-installed-files).
+如果是日常更新已经安装过的 kit 文件，请使用 `update`，不要再用 `init --force`；见[更新已安装文件](#更新已安装文件)。
 
-By default, `init` skips existing files:
+默认情况下，`init` 会跳过已有文件：
 
 ```text
 SKIP existing: .claude/commands/task.md
 ```
 
-## Daily Workflow
+## 日常工作流
 
-### `/task <task-id>` — Full Trellis Task Entrypoint
+### `/task <task-id>` — 完整 Trellis Task 入口
 
-Use `/task <task-id>` for prepared Trellis tasks. It resolves the current or requested task, switches only after exactly one match is found, reads the development-location guide, asks whether to use the current workspace or `.worktrees/<task-id>` before implementation when needed, and then continues native `/trellis:continue` phase routing.
+使用 `/task <task-id>` 处理已准备好的 Trellis task。它会解析当前或指定 task，只在唯一匹配后切换 task，读取开发位置选择 guide，在需要 implementation 前询问使用当前工作区还是 `.worktrees/<task-id>`，然后继续 Trellis 原生 `/trellis:continue` 阶段路由。
 
 ```text
 /task 06-24-school-operation-log
 /task school-operation-log
 ```
 
-`/task` does not create a new task, does not load all of `.trellis/spec/` by default, does not automatically generate Review Handoff, and does not review, commit, push, merge, rebase, or finish-work.
+`/task` 不创建新 task，不默认读取整个 `.trellis/spec/`，不自动生成 Review Handoff，也不会自动 review、commit、push、merge、rebase 或 finish-work。
 
-### `/fix <request>` — Fast Path Fix
+### `/fix <request>` — 快速修复
 
-Use `/fix` for small bug fixes, small adjustments, and low-risk patches in the current workspace. It does not create a full Trellis task, does not create PRD/DESIGN/TASK documents, does not generate Review Handoff by default, does not commit, and does not run review by default.
+`/fix` 用于在当前工作区完成小 bug、小改动和低风险 patch。它默认不创建完整 Trellis task，不创建 PRD/DESIGN/TASK，不生成 Review Handoff，不 commit，也不执行 review。
 
 ```text
 /fix 修复学生档案导出时手机号为空导致 NPE 的问题
 /fix 学生档案列表里班级名称字段现在返回 classId，改成返回 className
 ```
 
-### `/handoff` — Manual Review Handoff
+### `/handoff` — 手动 Review Handoff
 
-Use `/handoff` when you want Claude Code to generate a Review Handoff Markdown file for the active Trellis task.
+当你希望 Claude Code 为当前 active Trellis task 生成 Review Handoff Markdown 时，使用 `/handoff`。
 
 ```text
 /handoff
 ```
 
-It confirms the active task, reads the handoff workflow guide and template, collects changed files, checks, risks, and summary information, writes the Markdown handoff, and returns the path. `/handoff` generates a Review Handoff Markdown file with a Review Scope and a Suggested Review Prompt. The default Review Scope is the local working tree changes, including staged changes, unstaged changes, and task-related untracked files. It does not run reviewers or commit.
+它会确认 active task，读取 handoff workflow guide 和 template，收集 changed files、checks、risks 和 summary，写出 Markdown handoff 并返回路径。`/handoff` 会生成包含 Review Scope 和 Suggested Review Prompt 的 Review Handoff Markdown。默认 Review Scope 是当前本地工作区改动，包括 staged、unstaged，以及与任务相关的 untracked 新文件。它不会运行 reviewer，也不会 commit。
 
-### `/review-fix <review-md>` — Review Finding Fixes
+### `/review-fix <review-md>` — Review 问题修复
 
-Use `/review-fix <review-md>` to apply P0/P1 fixes from a Codex, Claude, human, or other external review markdown file.
+使用 `/review-fix <review-md>` 根据 Codex、Claude、人工或其他外部 reviewer 输出的 review markdown 修复 P0/P1 问题。
 
 ```text
 /review-fix .trellis/tasks/06-23-customer-safety-education/reviews/codex-review.md
 ```
 
-`/review-fix` reads the review markdown and the review loop guide, fixes only findings explicitly reported in the review markdown, runs targeted checks, and writes `review-fix-summary.md`. It does not automatically call reviewers, does not commit, and does not fix P2 findings by default unless the user explicitly asks.
+`/review-fix` 会读取 review markdown 和 review loop guide，只修复 review markdown 明确指出的问题，运行 targeted checks，并写出 `review-fix-summary.md`。它不会自动调用 reviewer，不会 commit，并且默认不自动修复 P2，除非用户明确要求。
 
-### `/rereview <review-md>` — Re-review Request
+### `/rereview <review-md>` — Re-review 请求
 
-Use `/rereview <review-md>` after `/review-fix` to prepare a focused re-review request.
+使用 `/rereview <review-md>` 在 `/review-fix` 修复后生成聚焦的 re-review 请求。
 
 ```text
 /rereview .trellis/tasks/06-23-customer-safety-education/reviews/codex-review.md
 ```
 
-`/rereview` reads the original review markdown, the review loop guide, and the review fix summary, then writes `rereview-request.md`. It only prepares re-review materials and does not automatically call Codex, Claude Review, a human reviewer, or any external reviewer.
+`/rereview` 会读取原始 review markdown、review loop guide 和 review fix summary，然后写出 `rereview-request.md`。它只准备 re-review 材料，不会自动调用 Codex、Claude Review、人工 reviewer 或任何外部 reviewer。
 
-### `/spec-cleanup` — Spec Cleanup
+### `/spec-cleanup` — Spec 清理
 
-`/spec-cleanup` automatically audits, safely organizes, and consolidates `.trellis/spec/`. It keeps active guides, archives historical task specs, deprecates replaced workflow rules, merges low-risk duplicate specs into canonical guides, updates references to canonical files, and removes stale broad spec-loading wording without overriding Trellis-native context selection. It asks for confirmation before destructive, ambiguous, conflicting, or behavior-changing actions.
+`/spec-cleanup` 会自动审查、安全整理并整合 `.trellis/spec/`。它会保留当前有效规则，自动归档历史任务文档，自动废弃已被替代的旧流程规则，把低风险重复 spec 自动合并到 canonical guide，更新旧引用到 canonical 文件，并移除过时的全量读取 spec 写法，但不覆盖 Trellis 原生 context 选择。只有在删除、歧义、冲突或会改变核心行为的操作时才会询问确认。
 
 ```text
 /spec-cleanup
 ```
 
-## Selective Spec Loading
+## 选择性 Spec 加载
 
-Commands should not blindly load the entire `.trellis/spec/` directory by default. `/task` and `/fix` rely on native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/handoff`, `/review-fix`, `/rereview`, and `/spec-cleanup` read their targeted guides first, then inspect only the files needed for the command.
+命令不应默认盲目全量读取 `.trellis/spec/`。`/task` 和 `/fix` 交给 Trellis 原生 workflow、task context 和 spec index 判断哪些项目规则相关；`/handoff`、`/review-fix`、`/rereview` 和 `/spec-cleanup` 会先读取自己的目标 guide，再按命令需要检查相关文件。
 
-## Development Location
+## 开发位置选择
 
-Worktree selection happens inside `/task`, before implementation.
+worktree 选择发生在 `/task` 中，并且必须在 implementation 前完成。
 
-If the user chooses a task-specific worktree, Trellis Kit uses:
+如果用户选择任务专用 worktree，固定使用：
 
 ```text
 .worktrees/<task-id>
 ```
 
-with branch:
+分支名固定为：
 
 ```text
 task/<task-id>
 ```
 
-Before creating a task worktree, the agent verifies `.gitignore` contains `.worktrees/`; if missing, it asks before adding it. If Trellis planning/design/task artifacts are uncommitted, it warns before creating the worktree. If implementation has already started and code is dirty, it defaults to continuing the current workspace.
+创建 task worktree 前，Agent 会确认 `.gitignore` 是否包含 `.worktrees/`；如果缺失，会先询问是否添加。如果 Trellis planning/design/task artifacts 尚未提交，它会先提醒。若 implementation 已经开始且代码有未提交改动，默认继续使用当前工作区。
 
-Worktrees must not be created in:
+不得在以下位置创建 worktree：
 
 ```text
 .trellis/worktrees/
@@ -230,75 +234,75 @@ Worktrees must not be created in:
 /tmp/
 ```
 
-## Review Handoff And Review Loop
+## Review Handoff 与 Review 闭环
 
-Review Handoff Markdown is an optional handoff document for manual external review. It is not a replacement for Trellis native check.
+Review Handoff Markdown 是可选外部审查交接材料，不是 Trellis check 的替代品。
 
-`/handoff` generates a Review Handoff Markdown file with a Review Scope and a Suggested Review Prompt. The default Review Scope is the local working tree changes, including staged changes, unstaged changes, and task-related untracked files.
+`/handoff` 会生成包含 Review Scope 和 Suggested Review Prompt 的 Review Handoff Markdown。默认 Review Scope 是当前本地工作区改动，包括 staged、unstaged，以及与任务相关的 untracked 新文件。
 
-Generating a Review Handoff does not imply automatic review. The user may choose to skip, generate and review personally, hand off to Codex, hand off to Claude, send to a human reviewer, use another tool, or generate later.
+生成 Review Handoff 不代表会自动 review。用户可以选择不生成、生成后自己审查、交给 Codex、交给 Claude、发送给人工 reviewer、使用其他工具，或稍后再生成。
 
-Recommended review loop:
+推荐 review 闭环：
 
-1. Run `/handoff` to generate review-handoff.md.
-2. Give the handoff to Codex, Claude, or a human reviewer.
-3. Save the review result under `.trellis/tasks/<task-id>/reviews/`.
-4. Run `/review-fix <review-md>` to fix P0/P1 findings.
-5. Run `/rereview <review-md>` to generate a re-review request.
-6. Give the re-review request to the reviewer manually.
+1. 使用 `/handoff` 生成 review-handoff.md。
+2. 将 handoff 交给 Codex、Claude 或人工 reviewer。
+3. 将 review 结果保存到 `.trellis/tasks/<task-id>/reviews/`。
+4. 使用 `/review-fix <review-md>` 修复 P0/P1 问题。
+5. 使用 `/rereview <review-md>` 生成 re-review 请求。
+6. 手动将 re-review 请求交给 reviewer 复查。
 
-`/review-fix` does not automatically call reviewers. `/rereview` does not automatically call reviewers. P2 findings are not fixed automatically by default. All external review and re-review execution is manually triggered by the user.
+`/review-fix` 不自动调用 reviewer。`/rereview` 不自动调用 reviewer。P2 默认不自动修。所有外部 review 和 re-review 都由用户手动触发。
 
-## Manual External Review
+## 手动外部审查
 
-This kit does not install bundled review scripts.
+本 kit 不安装 bundled review 脚本。
 
-Review Handoff Markdown and Re-review Request Markdown are portable handoff artifacts. The user may paste the Suggested Review Prompt into Codex, Claude, another reviewer, or send it to a human reviewer manually.
+Review Handoff Markdown 和 Re-review Request Markdown 都是可移植的交接材料。用户可以把 Suggested Review Prompt 手动粘贴给 Codex、Claude、其他 reviewer，或发送给人工 reviewer。
 
-No command in this kit runs an external reviewer automatically.
+本 kit 中没有任何命令会自动运行外部 reviewer。
 
-## Safety Rules
+## 安全规则
 
-The installer does not:
+安装器不会：
 
-- Modify `.trellis/workflow.md`.
-- Run `trellis init`.
-- Install Trellis, Claude Code, or Codex CLI.
-- Run Codex Review during installation.
-- Delete files by default; only `update --prune-old` deletes the documented legacy review scripts under `.trellis/scripts/` and `.trellis/spec/scripts/`, plus old renamed templates under `.trellis/spec/`.
-- Delete older target-project Claude command files.
-- Overwrite files unless `--force` is used with `init` or `update` is used intentionally.
-- Push, merge, or rebase.
-- Modify remote repositories.
-- Create `.worktrees/` directory.
-- Modify target project `.gitignore`.
+- 修改 `.trellis/workflow.md`。
+- 运行 `trellis init`。
+- 安装 Trellis、Claude Code 或 Codex CLI。
+- 在安装过程中运行 Codex Review。
+- 默认删除文件；只有 `update --prune-old` 会删除 `.trellis/scripts/` 和 `.trellis/spec/scripts/` 下文档列出的遗留 review 脚本，以及 `.trellis/spec/` 下已改名的旧模板。
+- 删除目标项目中旧版本留下的 Claude 命令文件。
+- 在未传入 `--force` 的 `init` 或未明确运行 `update` 时覆盖文件。
+- push、merge 或 rebase。
+- 修改远端仓库。
+- 创建 `.worktrees/` 目录。
+- 修改目标项目 `.gitignore`。
 
-The installed workflow tells Claude Code:
+安装后的工作流会要求 Claude Code 遵守：
 
-- Claude Code implements prepared tasks, small fixes, and explicitly reported review fixes.
-- Trellis native check is the default verification.
-- Review Handoff is optional and user-controlled.
-- External review and re-review are user-controlled.
-- P2 findings are not fixed automatically by default.
-- The user decides whether to commit, push, merge, or finish-work.
+- Claude Code 负责实现已准备好的 task、小修复和 review markdown 明确指出的问题。
+- Trellis 内置 check 是默认验证方式。
+- Review Handoff 是可选且由用户控制的。
+- 外部 review 和 re-review 由用户控制。
+- P2 默认不自动修。
+- 是否 commit、push、merge 或 finish-work 由用户决定。
 
-## Updating Installed Files
+## 更新已安装文件
 
-Use `update` when the kit is already installed in a project and you want to refresh the installed templates from the current package version:
+当项目里已经安装过这个 kit，想把已安装模板更新到当前包版本时，请运行：
 
 ```bash
 trellis-kit update
 ```
 
-`update` overwrites installed kit files with the packaged templates. Review local customizations before running it.
+`update` 会用包内模板覆盖已安装的 kit 文件。运行前请先检查本地自定义内容。
 
-If you are migrating from a version that installed review scripts under `.trellis/scripts/` or `.trellis/spec/scripts/`, or old renamed Review Handoff templates under `.trellis/spec/`, explicitly prune those old files after installing the current files:
+如果你正在从旧版本迁移，旧版本曾把 review 脚本安装到 `.trellis/scripts/` 或 `.trellis/spec/scripts/`，或在 `.trellis/spec/` 下安装过已改名的旧 Review Handoff 模板，可以在安装当前文件后显式清理这些旧文件：
 
 ```bash
 trellis-kit update --prune-old
 ```
 
-`--prune-old` deletes only these legacy files when they exist:
+`--prune-old` 只会删除下面这些存在的遗留文件：
 
 ```text
 .trellis/scripts/codex-review.sh
@@ -313,47 +317,47 @@ trellis-kit update --prune-old
 .trellis/spec/templates/codex-handoff-template.md
 ```
 
-Use dry run first when unsure:
+不确定时先 dry run：
 
 ```bash
 trellis-kit update --dry-run
 trellis-kit update --dry-run --prune-old
 ```
 
-## Migration Notes
+## 迁移说明
 
-### Claude Command Surface
+### Claude 命令面
 
-Older versions may have installed `.claude/commands/dev.md`. Remove it manually if it exists.
+旧版本可能安装过 `.claude/commands/dev.md`。如果存在，请确认不再需要后手动删除。
 
-### File Renames (v0.5.0)
+### 文件重命名（v0.5.0）
 
-The following template files were renamed:
+以下模板文件已改名：
 
-| Old Name | New Name |
-|----------|----------|
+| 旧名称 | 新名称 |
+|--------|--------|
 | `.trellis/spec/guides/claude-codex-review-workflow.md` | `.trellis/spec/guides/review-handoff-workflow.md` |
 | `.trellis/spec/templates/codex-handoff-template.md` | `.trellis/spec/templates/review-handoff-template.md` |
 
-Projects installed with older kit versions may still have the old files. After upgrading, confirm no local customizations exist in the old files, then manually delete them to avoid conflicts with the new Review Handoff Workflow.
+旧版本安装过的项目可能仍保留旧文件。升级后请先确认没有本地自定义内容，再手动删除旧文件，避免旧规则与新的 Review Handoff Workflow 冲突。
 
-### Worktree Path Change
+### Worktree 路径变更
 
-Older versions may have recommended worktree paths such as `../<repo>-worktrees/<task-id>`, `../<repo>-<task-id>`, or `.trellis/worktrees/<task-id>`. The current version uses only `.worktrees/<task-id>`.
+旧版本可能推荐过 `../<repo>-worktrees/<task-id>`、`../<repo>-<task-id>` 或 `.trellis/worktrees/<task-id>` 等 worktree 路径。当前版本统一使用 `.worktrees/<task-id>`。
 
-## Troubleshooting
+## 故障排查
 
 ### `.trellis directory not found`
 
-Initialize Trellis in the target project first:
+先在目标项目中初始化 Trellis：
 
 ```bash
 trellis init -u amin --claude --codex
 ```
 
-The installer warns about missing `.trellis`, but it does not fail because some users may prepare directories manually.
+安装器会警告缺少 `.trellis`，但不会失败，因为有些用户可能会手动准备目录。
 
-## Local Manual Test Outline
+## 本地手动测试概要
 
 ```bash
 npm install -g .

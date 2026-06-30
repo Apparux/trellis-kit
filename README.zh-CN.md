@@ -11,7 +11,7 @@ Trellis Kit 不替代 Trellis 原生工作流，只补充几个聚焦的 Claude 
 
 它是一个无运行时依赖的小型 Node.js CLI 包。这个工具只在本地工作。安装过程不会创建 GitHub Actions，不会 push，不会 merge，也不会运行 Codex Review。
 
-[English README](README.md)
+[English README](README.en.md)
 
 ## 重命名说明
 
