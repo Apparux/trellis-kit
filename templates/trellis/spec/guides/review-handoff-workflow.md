@@ -72,8 +72,44 @@ Review Handoff Markdown must include:
 - Checks performed
 - Known limitations and risks
 - Review focus
-- Git diff scope
+- Review scope
 - Suggested review prompt
+
+## Review Scope
+
+`Review Scope` is the declared review boundary. It describes what the reviewer should inspect and is not necessarily limited to a git diff.
+
+Do not use the legacy `Git Diff Scope` name as the standard field name in new Review Handoff Markdown. Use `Review Scope` instead.
+
+The default Review Scope is the current local working tree changes, including:
+
+- staged changes
+- unstaged changes
+- newly added untracked files related to this task
+
+Reviewers should not inspect only `git diff`, because:
+
+- `git diff` only shows unstaged changes
+- `git diff --cached` shows staged changes
+- untracked files must be discovered with `git status --short` and then opened directly
+
+Suggested commands:
+
+```bash
+git status --short
+git diff
+git diff --cached
+```
+
+## Suggested Review Prompt
+
+The Suggested Review Prompt must refer to the declared Review Scope, not the legacy Git Diff Scope name.
+
+Use this scope sentence:
+
+```text
+Read this handoff first, then inspect only the declared Review Scope.
+```
 
 ## External Review Tooling
 

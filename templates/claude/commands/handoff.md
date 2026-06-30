@@ -29,7 +29,19 @@ For every `/handoff` request:
    python3 ./.trellis/scripts/get_context.py
    ```
 
-3. Inspect the working tree and diff scope.
+3. Inspect the working tree and Review Scope. The default Review Scope is `Local working tree changes`, including:
+   - staged changes
+   - unstaged changes
+   - untracked task-related files
+
+   Suggested commands:
+
+   ```bash
+   git status --short
+   git diff
+   git diff --cached
+   ```
+
 4. Collect the information required by the handoff template:
    - Task
    - Task path
@@ -42,10 +54,13 @@ For every `/handoff` request:
    - Checks performed
    - Known limitations and risks
    - Review focus
-   - Git diff scope
+   - Review scope
    - Suggested review prompt
 5. Ask the user for any missing summary, risk, or check information that cannot be inferred safely.
 6. Write the Review Handoff Markdown file in the current task directory, using a clear filename such as `review-handoff.md` unless the task already has a more specific convention.
+   - The generated Markdown must include `## Review Scope`.
+   - The generated Markdown must include `## Suggested Review Prompt`.
+   - The generated Markdown must not include the legacy `## Git Diff Scope` section.
 7. Return the generated file path.
 
 ## Constraints

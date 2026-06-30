@@ -164,7 +164,7 @@ Use `/handoff` when you want Claude Code to generate a Review Handoff Markdown f
 /handoff
 ```
 
-It confirms the active task, reads the handoff workflow guide and template, collects changed files, checks, risks, and summary information, writes the Markdown handoff, and returns the path. It does not run reviewers or commit.
+It confirms the active task, reads the handoff workflow guide and template, collects changed files, checks, risks, and summary information, writes the Markdown handoff, and returns the path. `/handoff` generates a Review Handoff Markdown file with a Review Scope and a Suggested Review Prompt. The default Review Scope is the local working tree changes, including staged changes, unstaged changes, and task-related untracked files. It does not run reviewers or commit.
 
 ### `/spec-cleanup` — Spec Cleanup
 
@@ -209,13 +209,15 @@ Worktrees must not be created in:
 
 Review Handoff Markdown is an optional handoff document for manual external review. It is not a replacement for Trellis native check.
 
+`/handoff` generates a Review Handoff Markdown file with a Review Scope and a Suggested Review Prompt. The default Review Scope is the local working tree changes, including staged changes, unstaged changes, and task-related untracked files.
+
 Generating a Review Handoff does not imply automatic review. The user may choose to skip, generate and review personally, hand off to Codex, hand off to Claude, send to a human reviewer, use another tool, or generate later.
 
 ## Manual External Review
 
 This kit does not install bundled review scripts.
 
-Review Handoff Markdown is the portable handoff artifact. The user may paste it into Codex, Claude, another tool, or send it to a human reviewer manually.
+Review Handoff Markdown is the portable handoff artifact. The user may paste the Suggested Review Prompt into Codex, Claude, another reviewer, or send it to a human reviewer manually.
 
 No command in this kit runs an external reviewer automatically.
 

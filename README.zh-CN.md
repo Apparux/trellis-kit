@@ -168,7 +168,7 @@ SKIP existing: .claude/commands/task.md
 /handoff
 ```
 
-它会确认 active task，读取 handoff workflow guide 和 template，收集 changed files、checks、risks 和 summary，写出 Markdown handoff 并返回路径。它不会运行 reviewer，也不会 commit。
+它会确认 active task，读取 handoff workflow guide 和 template，收集 changed files、checks、risks 和 summary，写出 Markdown handoff 并返回路径。`/handoff` 会生成包含 Review Scope 和 Suggested Review Prompt 的 Review Handoff Markdown。默认 Review Scope 是当前本地工作区改动，包括 staged、unstaged，以及与任务相关的 untracked 新文件。它不会运行 reviewer，也不会 commit。
 
 ### `/spec-cleanup` — Spec 清理
 
@@ -213,13 +213,15 @@ task/<task-id>
 
 Review Handoff Markdown 是可选外部审查交接材料，不是 Trellis check 的替代品。
 
+`/handoff` 会生成包含 Review Scope 和 Suggested Review Prompt 的 Review Handoff Markdown。默认 Review Scope 是当前本地工作区改动，包括 staged、unstaged，以及与任务相关的 untracked 新文件。
+
 生成 Review Handoff 不代表会自动 review。用户可以选择不生成、生成后自己审查、交给 Codex、交给 Claude、发送给人工 reviewer、使用其他工具，或稍后再生成。
 
 ## 手动外部审查
 
 本 kit 不安装 bundled review 脚本。
 
-Review Handoff Markdown 是可移植的交接材料。用户可以手动粘贴给 Codex、Claude、其他工具，或发送给人工 reviewer。
+Review Handoff Markdown 是可移植的交接材料。用户可以把 Suggested Review Prompt 手动粘贴给 Codex、Claude、其他 reviewer，或发送给人工 reviewer。
 
 本 kit 中没有任何命令会自动运行外部 reviewer。
 

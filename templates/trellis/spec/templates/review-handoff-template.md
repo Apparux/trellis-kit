@@ -42,16 +42,64 @@
 
 Describe special review focus areas such as permissions, security, migrations, concurrency, or compatibility. If there are no special focus areas, write `无`.
 
-## Git Diff Scope
+## Review Scope
 
-Default review scope:
+Type: Local working tree changes
+
+Review the local working tree changes in the current project/worktree.
+
+Include:
+
+- staged changes
+- unstaged changes
+- newly added untracked files related to this task
+
+Suggested commands:
 
 ```bash
-git diff HEAD~1..HEAD
+git status --short
+git diff
+git diff --cached
 ```
 
-If the implementation used multiple local commits, record the exact diff range here.
+Notes:
+
+- Do not review the entire repository.
+- Do not rely only on `git diff`, because staged changes and untracked files may be missed.
+- Inspect untracked task-related files shown by `git status --short`.
 
 ## Suggested Review Prompt
 
-Review the implementation described in this handoff. Inspect only the declared diff scope and report findings as P0/P1/P2 with file references, impact, and suggested fixes. Do not modify code unless explicitly requested.
+Please review this implementation as a code reviewer.
+
+Read this handoff first, then inspect only the declared Review Scope.
+
+Review the local working tree changes in the current project/worktree, including:
+
+- staged changes
+- unstaged changes
+- newly added untracked files related to this task
+
+Suggested commands:
+
+```bash
+git status --short
+git diff
+git diff --cached
+```
+
+Do not modify code.
+Do not commit.
+Do not run external reviewers.
+Do not review the entire repository.
+Report findings as P0/P1/P2.
+
+For each finding, include:
+
+- Severity
+- File path
+- Problem
+- Impact
+- Suggested fix
+
+If there are no findings, say: No findings.
