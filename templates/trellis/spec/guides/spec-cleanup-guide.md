@@ -48,7 +48,7 @@ Examples:
 
 - `development-location-decision.md`
 - `fast-path-change-policy.md`
-- `review-handoff-workflow.md`
+- `review-workflow.md`
 - `spec-cleanup-guide.md`
 
 Active guides should be:
@@ -65,13 +65,13 @@ Reusable output templates.
 
 Examples:
 
-- `review-handoff-template.md`
+- `review-brief-template.md`
 
 Templates should stay under `.trellis/spec/templates/`.
 
 ### Task-Specific Specs
 
-Task PRDs, designs, plans, task notes, handoffs, and temporary specs that are only relevant to a single Trellis task.
+Task PRDs, designs, plans, task notes, review notes, and temporary specs that are only relevant to a single Trellis task.
 
 These should not be treated as global guides.
 
@@ -186,12 +186,12 @@ Canonical current guide names include:
 
 - `development-location-decision.md`
 - `fast-path-change-policy.md`
-- `review-handoff-workflow.md`
+- `review-workflow.md`
 - `spec-cleanup-guide.md`
 
 Canonical current template names include:
 
-- `review-handoff-template.md`
+- `review-brief-template.md`
 
 Keep as templates when the file is reusable output structure.
 
@@ -218,19 +218,19 @@ or:
 Old workflow files likely to deprecate:
 
 - `claude-codex-review-workflow.md`
-- `codex-handoff-template.md`
+- `legacy-codex-review-template.md`
 
 Old concepts likely to deprecate:
 
 - mandatory external-review gates
 - automatic external-review execution
-- mandatory Review Handoff requirements
-- Review Handoff gate wording
-- Review Handoff decision gate wording
+- mandatory Review Brief requirements
+- Review Brief gate wording
+- Review Brief decision gate wording
 - `automatic P0/P1 fix`
 - `automatic re-review`
-- `Review Handoff replaces Trellis check`
-- `Review Handoff is mandatory`
+- `Review Brief replaces Trellis check`
+- `Review Brief generation is mandatory`
 
 Old worktree path rules likely to deprecate:
 
@@ -256,12 +256,12 @@ Canonical current guide names include:
 
 - `development-location-decision.md`
 - `fast-path-change-policy.md`
-- `review-handoff-workflow.md`
+- `review-workflow.md`
 - `spec-cleanup-guide.md`
 
 Canonical current template names include:
 
-- `review-handoff-template.md`
+- `review-brief-template.md`
 
 ### Automatic Low-Risk Merge
 
@@ -279,9 +279,9 @@ Examples of automatic low-risk merges:
 
 - Moving non-conflicting worktree path details into `development-location-decision.md`.
 - Moving non-conflicting Fast Path examples into `fast-path-change-policy.md`.
-- Moving old Codex-specific handoff wording into reviewer-neutral `review-handoff-workflow.md` after rewriting it to current terminology.
+- Moving old Codex-specific review wording into `review-workflow.md` after rewriting it to current channel terminology.
 - Consolidating duplicate selective spec loading rules into `spec-cleanup-guide.md`.
-- Consolidating duplicate Review Handoff template guidance into `review-handoff-template.md`.
+- Consolidating duplicate Review Brief template guidance into `review-brief-template.md`.
 - Consolidating duplicate “do not auto review / do not auto commit” wording into the current canonical guide if the meaning is unchanged.
 
 ### Actions After Automatic Merge
@@ -305,7 +305,7 @@ The agent must ask the user before merging when:
 - It is unclear which rule is newer or canonical.
 - The merge would change default behavior.
 - The merge affects worktree location policy.
-- The merge affects review, check, handoff, commit, push, merge, rebase, or finish-work behavior.
+- The merge affects review, check, review brief generation, commit, push, merge, rebase, or finish-work behavior.
 - The merge affects `/task`, `/fix`, or `/spec-cleanup` core behavior.
 - The file appears to contain user-authored project-specific policy.
 - The file appears related to the current active Trellis task.

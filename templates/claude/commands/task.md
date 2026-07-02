@@ -129,7 +129,7 @@ Route by task status and artifacts:
 - `in_progress`: continue implementation or quality check according to the Trellis phase and current code state.
 - `completed`: report that the task is completed and stop unless the user explicitly asks for follow-up work.
 
-Do not automatically generate Review Handoff Markdown. The user may request `/handoff` manually when they want a handoff document.
+Do not automatically generate Review Brief Markdown or run review. The user may request `/review` when they want a channel-driven review.
 
 ## Forbidden
 
@@ -141,7 +141,7 @@ Unless the user explicitly authorizes it in the current conversation, `/task` mu
 - Create a worktree before the user chooses a development location
 - Switch branches before the user chooses a development location
 - Start implementation before the user chooses a development location when the decision applies
-- Generate Review Handoff Markdown
+- Generate Review Brief Markdown
 - Run Codex Review
 - Run Claude Review
 - Run any external reviewer

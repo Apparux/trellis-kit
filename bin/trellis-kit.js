@@ -12,16 +12,24 @@ const packageJsonPath = path.join(pkgRoot, "package.json");
 
 const templateFiles = [
   {
-    from: "templates/trellis/spec/guides/review-handoff-workflow.md",
-    to: ".trellis/spec/guides/review-handoff-workflow.md",
+    from: "templates/trellis/spec/guides/review-workflow.md",
+    to: ".trellis/spec/guides/review-workflow.md",
   },
   {
     from: "templates/trellis/spec/guides/review-loop-workflow.md",
     to: ".trellis/spec/guides/review-loop-workflow.md",
   },
   {
-    from: "templates/trellis/spec/templates/review-handoff-template.md",
-    to: ".trellis/spec/templates/review-handoff-template.md",
+    from: "templates/trellis/spec/templates/review-brief-template.md",
+    to: ".trellis/spec/templates/review-brief-template.md",
+  },
+  {
+    from: "templates/trellis/spec/templates/rereview-brief-template.md",
+    to: ".trellis/spec/templates/rereview-brief-template.md",
+  },
+  {
+    from: "templates/trellis/spec/templates/review-fix-summary-template.md",
+    to: ".trellis/spec/templates/review-fix-summary-template.md",
   },
   {
     from: "templates/trellis/spec/guides/development-location-decision.md",
@@ -44,16 +52,12 @@ const templateFiles = [
     to: ".claude/commands/fix.md",
   },
   {
-    from: "templates/claude/commands/handoff.md",
-    to: ".claude/commands/handoff.md",
+    from: "templates/claude/commands/review.md",
+    to: ".claude/commands/review.md",
   },
   {
     from: "templates/claude/commands/review-fix.md",
     to: ".claude/commands/review-fix.md",
-  },
-  {
-    from: "templates/claude/commands/rereview.md",
-    to: ".claude/commands/rereview.md",
   },
   {
     from: "templates/claude/commands/spec-cleanup.md",
@@ -71,7 +75,12 @@ const oldFilesToPrune = [
   ".trellis/spec/scripts/codex-review.ps1",
   ".trellis/spec/scripts/codex-rereview.ps1",
   ".trellis/spec/guides/claude-codex-review-workflow.md",
+  ".trellis/spec/guides/review-handoff-workflow.md",
   ".trellis/spec/templates/codex-handoff-template.md",
+  ".trellis/spec/templates/review-handoff-template.md",
+  ".trellis/spec/templates/rereview-handoff-template.md",
+  ".claude/commands/handoff.md",
+  ".claude/commands/rereview.md",
 ];
 
 function readPackageJson() {
@@ -253,14 +262,14 @@ Next steps:
 2. Start a small bug fix or patch in Claude Code:
    /fix <bug description>
 
-3. Generate a manual Review Handoff when needed:
-   /handoff
+3. Run Codex review for the active Trellis task through trellis channel:
+   /review
 
-4. Apply P0/P1 fixes from saved review markdown:
-   /review-fix <review-md>
+4. Apply actionable fixes from the latest saved review result:
+   /review-fix
 
-5. Prepare a manual re-review request after fixes:
-   /rereview <review-md>
+5. Re-review fixes through the same trellis channel workflow:
+   /review --rereview
 
 6. Clean up Trellis specs when needed:
    /spec-cleanup`);
@@ -275,7 +284,7 @@ function installTemplates(command, options) {
 
   warnIfMissing(targetRoot, ".git", "Trellis workflow files are intended for use inside a git project.");
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
-  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /task, /fix, /handoff, /review-fix, /rereview, and /spec-cleanup commands available.");
+  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /task, /fix, /review, /review-fix, and /spec-cleanup commands available.");
 
   if (command === "init" && options.pruneOld) {
     throw new Error("--prune-old can only be used with update");

@@ -91,7 +91,7 @@ Ask before merging when:
 - the merge changes behavior
 - the content is project-specific
 - the content belongs to the current active task
-- the merge affects review, check, handoff, commit, push, merge, rebase, finish-work, or worktree location behavior
+- the merge affects review, check, review brief generation, commit, push, merge, rebase, finish-work, or worktree location behavior
 
 ## Confirmation Required
 

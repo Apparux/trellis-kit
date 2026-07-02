@@ -29,7 +29,7 @@ For every `/fix <request>`:
 3. Decide whether the request qualifies for Fast Path Fix according to `.trellis/spec/guides/fast-path-change-policy.md`.
 4. If it clearly qualifies, do not create PRD/DESIGN/TASK documents.
 5. If it does not qualify, explain briefly why it needs the full Trellis workflow and stop for the user's decision.
-6. Do not auto-generate Review Handoff.
+6. Do not auto-generate Review Brief or run review.
 7. Do not auto-commit.
 8. Do not run Codex Review, Claude Review, external review, or review scripts.
 9. Do not push, merge, rebase, or run finish-work.

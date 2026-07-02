@@ -94,7 +94,7 @@ Do not do any of the following for Fast Path Fix unless explicitly requested:
 * Perform large refactoring
 * Start implementation before inspecting relevant code
 * Switch development location
-* Generate Review Handoff
+* Generate Review Brief
 * Commit
 * Run Codex Review
 * Run Claude Review

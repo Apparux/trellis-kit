@@ -1,8 +1,10 @@
-# Review Loop Workflow
+# Review Workflow
 
 ## Purpose
 
-This guide defines the channel-driven Trellis review loop:
+This guide defines the Trellis channel review workflow for `/review` and `/review-fix`.
+
+The workflow is:
 
 ```text
 implementation -> /review -> /review-fix -> /review --rereview
@@ -12,11 +14,11 @@ implementation -> /review -> /review-fix -> /review --rereview
 
 ## When to Use
 
-Use this guide when a task needs Codex review through the Trellis channel runtime and a follow-up fix/rereview loop.
+Use this guide when running review for an active Trellis task or fixing findings from a saved review result.
 
 ## Inputs
 
-The loop uses:
+The workflow uses:
 
 - active Trellis task artifacts
 - saved review brief files under `.trellis/tasks/<task>/review/`
@@ -61,6 +63,30 @@ It must not:
 - modify code while running review
 - commit, push, merge, rebase, or finish-work
 
+## `/review` Rereview Mode Policy
+
+Rereview is a mode of `/review`.
+
+It reads the latest prior review result, latest review fix summary, and current fix diff, then sends `rereview-brief*.md` through the same `trellis channel` create/spawn/send/wait/messages flow.
+
+The rereview prompt must focus Codex on:
+
+- whether previous review findings were fixed
+- whether fixes introduced new problems
+- whether Blocking issues remain
+- avoiding repeated Nice to Have findings already confirmed as not being handled
+- avoiding repeated issues already marked False Positive
+
+The requested output must be grouped as:
+
+- Blocking
+- Should Fix
+- Nice to Have
+- Verified Fixed
+- False Positive / Not Applicable
+- New Risks Introduced
+- Final Recommendation
+
 ## `/review-fix` Policy
 
 `/review-fix` reads the latest saved Codex review result and fixes actionable findings.
@@ -84,30 +110,6 @@ Default behavior:
 `/review-fix` must not call Codex, Claude Review, any external reviewer, `trellis channel spawn`, `trellis channel wait`, `/review`, or `/review --rereview`.
 
 After fixes, it writes `review-fix-summary*.md` with source review, fixed findings, changed files, false positives, deferred findings, checks, remaining risks, and suggested rereview input.
-
-## `/review --rereview` Policy
-
-Rereview is a mode of `/review`, not a separate runtime.
-
-It reads the latest prior review result, latest review fix summary, and current fix diff, then sends `rereview-brief*.md` through the same `trellis channel` create/spawn/send/wait/messages flow.
-
-The rereview prompt must focus Codex on:
-
-- whether previous review findings were fixed
-- whether fixes introduced new problems
-- whether Blocking issues remain
-- avoiding repeated Nice to Have findings already confirmed as not being handled
-- avoiding repeated issues already marked False Positive
-
-The requested output must be grouped as:
-
-- Blocking
-- Should Fix
-- Nice to Have
-- Verified Fixed
-- False Positive / Not Applicable
-- New Risks Introduced
-- Final Recommendation
 
 ## Failure Handling
 

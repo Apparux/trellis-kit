@@ -4,9 +4,8 @@ Trellis Kit does not replace Trellis native workflow. It adds focused Claude com
 
 - `/task <task-id>`: switch/start/continue a Trellis task and decide the development location before implementation.
 - `/fix <request>`: lightweight fast path for small fixes.
-- `/handoff`: manually generate Review Handoff Markdown when requested.
-- `/review-fix <review-md>`: apply P0/P1 fixes from a Codex, Claude, or human review markdown.
-- `/rereview <review-md>`: prepare a re-review request after review fixes.
+- `/review`: generate a review brief for the current Trellis task and invoke a Codex check worker through `trellis channel`; also supports rereview mode.
+- `/review-fix`: read the latest Codex review result and fix only Blocking / Should Fix findings by default.
 - `/spec-cleanup`: automatically clean, archive, deprecate, and consolidate `.trellis/spec/`.
 
 It is a small Node.js CLI package with no runtime dependencies. This kit is local-only. It does not create GitHub Actions, does not push, does not merge, and does not run Codex Review during installation.
@@ -43,17 +42,18 @@ trellis-kit
 Running `trellis-kit init` installs Markdown templates and Claude command templates:
 
 ```text
-.trellis/spec/guides/review-handoff-workflow.md
+.trellis/spec/guides/review-workflow.md
 .trellis/spec/guides/review-loop-workflow.md
-.trellis/spec/templates/review-handoff-template.md
+.trellis/spec/templates/review-brief-template.md
+.trellis/spec/templates/rereview-brief-template.md
+.trellis/spec/templates/review-fix-summary-template.md
 .trellis/spec/guides/development-location-decision.md
 .trellis/spec/guides/fast-path-change-policy.md
 .trellis/spec/guides/spec-cleanup-guide.md
 .claude/commands/task.md
 .claude/commands/fix.md
-.claude/commands/handoff.md
+.claude/commands/review.md
 .claude/commands/review-fix.md
-.claude/commands/rereview.md
 .claude/commands/spec-cleanup.md
 ```
 
@@ -65,7 +65,7 @@ The installed files should be committed into the target project so the workflow 
 - git
 - Trellis
 - Claude Code
-- Codex CLI available as `codex` (optional; only needed if the user independently chooses to use Codex for manual external review)
+- Codex CLI available as `codex` (optional; only needed when running `/review` or `/review --rereview` Codex workers)
 
 ## Install Package
 
@@ -150,46 +150,59 @@ Use `/task <task-id>` for prepared Trellis tasks. It resolves the current or req
 /task school-operation-log
 ```
 
-`/task` does not create a new task, does not load all of `.trellis/spec/` by default, does not automatically generate Review Handoff, and does not review, commit, push, merge, rebase, or finish-work.
+`/task` does not create a new task, does not load all of `.trellis/spec/` by default, does not automatically generate Review Brief, and does not review, commit, push, merge, rebase, or finish-work.
 
 ### `/fix <request>` — Fast Path Fix
 
-Use `/fix` for small bug fixes, small adjustments, and low-risk patches in the current workspace. It does not create a full Trellis task, does not create PRD/DESIGN/TASK documents, does not generate Review Handoff by default, does not commit, and does not run review by default.
+Use `/fix` for small bug fixes, small adjustments, and low-risk patches in the current workspace. It does not create a full Trellis task, does not create PRD/DESIGN/TASK documents, does not generate Review Brief by default, does not commit, and does not run review by default.
 
 ```text
 /fix 修复学生档案导出时手机号为空导致 NPE 的问题
 /fix 学生档案列表里班级名称字段现在返回 classId，改成返回 className
 ```
 
-### `/handoff` — Manual Review Handoff
+### `/review` — Trellis Channel Review
 
-Use `/handoff` when you want Claude Code to generate a Review Handoff Markdown file for the active Trellis task.
-
-```text
-/handoff
-```
-
-It confirms the active task, reads the handoff workflow guide and template, collects changed files, checks, risks, and summary information, writes the Markdown handoff, and returns the path. `/handoff` generates a Review Handoff Markdown file with a Review Scope and a Suggested Review Prompt. The default Review Scope is the local working tree changes, including staged changes, unstaged changes, and task-related untracked files. It does not run reviewers or commit.
-
-### `/review-fix <review-md>` — Review Finding Fixes
-
-Use `/review-fix <review-md>` to apply P0/P1 fixes from a Codex, Claude, human, or other external review markdown file.
+Use `/review` to generate `review-brief.md` for the active Trellis task, create a review channel through `trellis channel`, spawn a Codex check worker, send the brief, wait for `done`, and save the review result.
 
 ```text
-/review-fix .trellis/tasks/06-23-customer-safety-education/reviews/codex-review.md
+/review
 ```
 
-`/review-fix` reads the review markdown and the review loop guide, fixes only findings explicitly reported in the review markdown, runs targeted checks, and writes `review-fix-summary.md`. It does not automatically call reviewers, does not commit, and does not fix P2 findings by default unless the user explicitly asks.
-
-### `/rereview <review-md>` — Re-review Request
-
-Use `/rereview <review-md>` after `/review-fix` to prepare a focused re-review request.
+Default output paths:
 
 ```text
-/rereview .trellis/tasks/06-23-customer-safety-education/reviews/codex-review.md
+.trellis/tasks/<task>/review/review-brief.md
+.trellis/tasks/<task>/review/codex-review.md
 ```
 
-`/rereview` reads the original review markdown, the review loop guide, and the review fix summary, then writes `rereview-request.md`. It only prepares re-review materials and does not automatically call Codex, Claude Review, a human reviewer, or any external reviewer.
+When history exists, numbered files such as `review-brief-001.md` and `codex-review-001.md` are used. `/review` is a channel wrapper; it does not implement worker scheduling, waiting, message reading, or cleanup itself.
+
+### `/review-fix` — Review Finding Fixes
+
+Use `/review-fix` to read the current task's latest Codex review result, classify findings, and fix Blocking / Should Fix findings by default.
+
+```text
+/review-fix
+```
+
+`/review-fix` writes:
+
+```text
+.trellis/tasks/<task>/review/review-fix-summary.md
+```
+
+It does not call reviewers, spawn workers, wait on channels, run `/review --rereview`, or commit. Nice to Have findings are not fixed by default, False Positive findings are documented with reasons, and Needs Human Decision findings are deferred for confirmation.
+
+### `/review --rereview` — Trellis Channel Re-review
+
+Use `/review --rereview` after `/review-fix` to ask Codex to re-review fixes through the same `trellis channel` flow.
+
+```text
+/review --rereview
+```
+
+Re-review reads the prior review result, review fix summary, and current fix diff, generates `rereview-brief.md`, and saves the next `codex-review*.md`. It focuses on whether prior findings were fixed, whether fixes introduced new issues, and whether Blocking issues remain.
 
 ### `/spec-cleanup` — Spec Cleanup
 
@@ -201,7 +214,7 @@ Use `/rereview <review-md>` after `/review-fix` to prepare a focused re-review r
 
 ## Selective Spec Loading
 
-Commands should not blindly load the entire `.trellis/spec/` directory by default. `/task` and `/fix` rely on native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/handoff`, `/review-fix`, `/rereview`, and `/spec-cleanup` read their targeted guides first, then inspect only the files needed for the command.
+Commands should not blindly load the entire `.trellis/spec/` directory by default. `/task` and `/fix` rely on native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/review`, `/review-fix`, `/review --rereview`, and `/spec-cleanup` read their targeted guide/template first, then inspect only the files needed for the command.
 
 ## Development Location
 
@@ -230,32 +243,33 @@ Worktrees must not be created in:
 /tmp/
 ```
 
-## Review Handoff And Review Loop
+## Review Brief And Review Loop
 
-Review Handoff Markdown is an optional handoff document for manual external review. It is not a replacement for Trellis native check.
-
-`/handoff` generates a Review Handoff Markdown file with a Review Scope and a Suggested Review Prompt. The default Review Scope is the local working tree changes, including staged changes, unstaged changes, and task-related untracked files.
-
-Generating a Review Handoff does not imply automatic review. The user may choose to skip, generate and review personally, hand off to Codex, hand off to Claude, send to a human reviewer, use another tool, or generate later.
+Review Brief Markdown is the structured input that `/review` sends to a Codex check worker. It is not a replacement for Trellis native check.
 
 Recommended review loop:
 
-1. Run `/handoff` to generate review-handoff.md.
-2. Give the handoff to Codex, Claude, or a human reviewer.
-3. Save the review result under `.trellis/tasks/<task-id>/reviews/`.
-4. Run `/review-fix <review-md>` to fix P0/P1 findings.
-5. Run `/rereview <review-md>` to generate a re-review request.
-6. Give the re-review request to the reviewer manually.
+1. Claude Code / Trellis finishes implementation and local checks.
+2. Run `/review` to generate `review-brief.md` and run a Codex check worker through `trellis channel`.
+3. `/review` saves Codex output to `.trellis/tasks/<task>/review/codex-review.md` or a numbered file.
+4. Run `/review-fix` to fix Blocking / Should Fix findings and generate `review-fix-summary.md`.
+5. Run `/review --rereview` to re-review using the prior review, fix summary, and current diff.
 
-`/review-fix` does not automatically call reviewers. `/rereview` does not automatically call reviewers. P2 findings are not fixed automatically by default. All external review and re-review execution is manually triggered by the user.
+`/review` and `/review --rereview` use `trellis channel` for worker spawning, sending, waiting, and message reading. They do not maintain an independent runtime. `/review-fix` does not call reviewers, spawn workers, or wait on channels. Nice to Have findings are not fixed by default; False Positive and Needs Human Decision findings are recorded in the summary.
 
-## Manual External Review
+## Trellis Channel Review
 
-This kit does not install bundled review scripts.
+This kit does not install bundled review scripts. Review worker execution is delegated to `trellis channel`.
 
-Review Handoff Markdown and Re-review Request Markdown are portable handoff artifacts. The user may paste the Suggested Review Prompt into Codex, Claude, another reviewer, or send it to a human reviewer manually.
+Prefer these diagnostics when debugging a channel:
 
-No command in this kit runs an external reviewer automatically.
+```bash
+trellis channel messages <channel-name> --raw --last 100
+trellis channel messages <channel-name> --raw --kind progress --last 100
+trellis channel ls
+```
+
+Do not read `events.jsonl` directly as the primary result path unless channel CLI diagnostics are insufficient.
 
 ## Safety Rules
 
@@ -275,11 +289,11 @@ The installer does not:
 
 The installed workflow tells Claude Code:
 
-- Claude Code implements prepared tasks, small fixes, and explicitly reported review fixes.
+- Claude Code implements prepared tasks, small fixes, and explicitly reported review findings.
 - Trellis native check is the default verification.
-- Review Handoff is optional and user-controlled.
-- External review and re-review are user-controlled.
-- P2 findings are not fixed automatically by default.
+- `/review` and `/review --rereview` invoke Codex check workers through `trellis channel`.
+- `/review-fix` only fixes code from saved review findings; it does not orchestrate workers.
+- Nice to Have findings are not fixed automatically by default.
 - The user decides whether to commit, push, merge, or finish-work.
 
 ## Updating Installed Files
@@ -292,7 +306,7 @@ trellis-kit update
 
 `update` overwrites installed kit files with the packaged templates. Review local customizations before running it.
 
-If you are migrating from a version that installed review scripts under `.trellis/scripts/` or `.trellis/spec/scripts/`, or old renamed Review Handoff templates under `.trellis/spec/`, explicitly prune those old files after installing the current files:
+If you are migrating from a version that installed review scripts under `.trellis/scripts/` or `.trellis/spec/scripts/`, or old renamed Review Brief templates under `.trellis/spec/`, explicitly prune those old files after installing the current files:
 
 ```bash
 trellis-kit update --prune-old
@@ -310,7 +324,12 @@ trellis-kit update --prune-old
 .trellis/spec/scripts/codex-review.ps1
 .trellis/spec/scripts/codex-rereview.ps1
 .trellis/spec/guides/claude-codex-review-workflow.md
+.trellis/spec/guides/review-handoff-workflow.md
 .trellis/spec/templates/codex-handoff-template.md
+.trellis/spec/templates/review-handoff-template.md
+.trellis/spec/templates/rereview-handoff-template.md
+.claude/commands/handoff.md
+.claude/commands/rereview.md
 ```
 
 Use dry run first when unsure:
@@ -325,17 +344,6 @@ trellis-kit update --dry-run --prune-old
 ### Claude Command Surface
 
 Older versions may have installed `.claude/commands/dev.md`. Remove it manually if it exists.
-
-### File Renames (v0.5.0)
-
-The following template files were renamed:
-
-| Old Name | New Name |
-|----------|----------|
-| `.trellis/spec/guides/claude-codex-review-workflow.md` | `.trellis/spec/guides/review-handoff-workflow.md` |
-| `.trellis/spec/templates/codex-handoff-template.md` | `.trellis/spec/templates/review-handoff-template.md` |
-
-Projects installed with older kit versions may still have the old files. After upgrading, confirm no local customizations exist in the old files, then manually delete them to avoid conflicts with the new Review Handoff Workflow.
 
 ### Worktree Path Change
 
@@ -367,17 +375,18 @@ git init
 mkdir -p .trellis .claude
 trellis-kit init
 
-test -f .trellis/spec/guides/review-handoff-workflow.md
+test -f .trellis/spec/guides/review-workflow.md
 test -f .trellis/spec/guides/review-loop-workflow.md
-test -f .trellis/spec/templates/review-handoff-template.md
+test -f .trellis/spec/templates/review-brief-template.md
+test -f .trellis/spec/templates/rereview-brief-template.md
+test -f .trellis/spec/templates/review-fix-summary-template.md
 test -f .trellis/spec/guides/development-location-decision.md
 test -f .trellis/spec/guides/fast-path-change-policy.md
 test -f .trellis/spec/guides/spec-cleanup-guide.md
 test -f .claude/commands/task.md
 test -f .claude/commands/fix.md
-test -f .claude/commands/handoff.md
+test -f .claude/commands/review.md
 test -f .claude/commands/review-fix.md
-test -f .claude/commands/rereview.md
 test -f .claude/commands/spec-cleanup.md
 test ! -f .claude/commands/dev.md
 ```
