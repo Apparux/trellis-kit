@@ -20,6 +20,14 @@ Before editing, read:
 1. `.trellis/spec/guides/fast-path-change-policy.md`
 2. Relevant project rules under `.trellis/spec/` selected by Trellis context or spec indexes
 
+## Minimal Implementation Context
+
+If `.trellis/spec/guides/minimal-implementation.md` exists, read it before editing and include it when curating implementation context:
+
+- Add it to `implement.jsonl` when the fix is handled inside Trellis task context.
+- Do not rely on `.trellis/spec/**/index.md` to discover this guide.
+- Do not modify any `index.md` file for this purpose.
+
 ## Fast Path Rule
 
 For every `/fix <request>`:

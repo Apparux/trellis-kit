@@ -44,6 +44,7 @@ Running `trellis-kit init` installs Markdown templates and Claude command templa
 ```text
 .trellis/spec/guides/review-workflow.md
 .trellis/spec/guides/review-loop-workflow.md
+.trellis/spec/guides/minimal-implementation.md
 .trellis/spec/templates/review-brief-template.md
 .trellis/spec/templates/rereview-brief-template.md
 .trellis/spec/templates/review-fix-summary-template.md
@@ -216,6 +217,8 @@ Re-review reads the prior review result, review fix summary, and current fix dif
 
 Commands should not blindly load the entire `.trellis/spec/` directory by default. `/task` and `/fix` rely on native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/review`, `/review-fix`, `/review --rereview`, and `/spec-cleanup` read their targeted guide/template first, then inspect only the files needed for the command.
 
+When `.trellis/spec/guides/minimal-implementation.md` exists, relevant commands curate it into `implement.jsonl` or `check.jsonl`; they do not rely on or require edits to `.trellis/spec/**/index.md`.
+
 ## Development Location
 
 Worktree selection happens inside `/task`, before implementation.
@@ -377,6 +380,7 @@ trellis-kit init
 
 test -f .trellis/spec/guides/review-workflow.md
 test -f .trellis/spec/guides/review-loop-workflow.md
+test -f .trellis/spec/guides/minimal-implementation.md
 test -f .trellis/spec/templates/review-brief-template.md
 test -f .trellis/spec/templates/rereview-brief-template.md
 test -f .trellis/spec/templates/review-fix-summary-template.md

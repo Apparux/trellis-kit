@@ -20,6 +20,10 @@ const templateFiles = [
     to: ".trellis/spec/guides/review-loop-workflow.md",
   },
   {
+    from: "templates/trellis/spec/guides/minimal-implementation.md",
+    to: ".trellis/spec/guides/minimal-implementation.md",
+  },
+  {
     from: "templates/trellis/spec/templates/review-brief-template.md",
     to: ".trellis/spec/templates/review-brief-template.md",
   },

@@ -9,10 +9,17 @@ This command performs safe cleanup automatically and asks the user only for dest
 Before cleanup, read:
 
 1. `.trellis/spec/guides/spec-cleanup-guide.md`
+2. `.trellis/spec/guides/minimal-implementation.md`, if it exists
 
 Do not load all `.trellis/spec/` files blindly.
 
 First list files, then inspect only files relevant to cleanup decisions.
+
+## Minimal Implementation Context
+
+If `.trellis/spec/guides/minimal-implementation.md` exists, use it when looking for dead code, unused abstractions, duplicate helpers, unnecessary compatibility logic, unnecessary dependencies, and logic that can be replaced by existing project conventions.
+
+Do not rely on `.trellis/spec/**/index.md` to discover this guide, and do not modify any `index.md` file for this purpose.
 
 ## Process
 

@@ -1,6 +1,6 @@
 {
   "name": "trellis-kit",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Trellis workflow templates and Claude commands for task continuation, fixes, channel review, and spec cleanup.",
   "repository": {
     "type": "git",

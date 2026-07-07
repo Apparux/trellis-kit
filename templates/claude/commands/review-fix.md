@@ -24,6 +24,15 @@ Do not use `/review-fix` for general bug fixes. Use `/fix <request>` for small u
 
 If the user provides a review file path, prefer that explicit file over automatic latest-file discovery.
 
+## Minimal Implementation Context
+
+If `.trellis/spec/guides/minimal-implementation.md` exists, include it in review-fix context when a finding involves over-engineering, cleanup, deprecated compatibility, broad refactor risk, or unnecessary abstraction risk:
+
+- Add it to `check.jsonl` when preserving check/review-fix context.
+- Treat over-engineering as one review dimension only; do not let simplification override correctness, security, regression risk, requirement coverage, data integrity, permissions, or tests.
+- Do not rely on `.trellis/spec/**/index.md` to discover this guide.
+- Do not modify any `index.md` file for this purpose.
+
 ## Outputs
 
 - Updated code or task files required to fix selected findings.

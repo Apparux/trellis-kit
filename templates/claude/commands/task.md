@@ -19,6 +19,15 @@ Before task routing and development-location decisions, read only:
 
 Do not load all of `.trellis/spec/` by default. Let Trellis context, phase routing, task artifacts, and spec indexes select any additional project rules later.
 
+## Minimal Implementation Context
+
+If `.trellis/spec/guides/minimal-implementation.md` exists, include it when curating implementation context for the task:
+
+- Add it to `implement.jsonl` for implementation-oriented work.
+- Add it to `check.jsonl` for check/review context when over-engineering, cleanup, deprecated compatibility, broad refactor risk, or unnecessary abstraction risk is relevant.
+- Do not rely on `.trellis/spec/**/index.md` to discover this guide.
+- Do not modify any `index.md` file for this purpose.
+
 ## Resolve The Task
 
 For every `/task <task-id>` request:

@@ -48,6 +48,7 @@ trellis-kit
 ```text
 .trellis/spec/guides/review-workflow.md
 .trellis/spec/guides/review-loop-workflow.md
+.trellis/spec/guides/minimal-implementation.md
 .trellis/spec/templates/review-brief-template.md
 .trellis/spec/templates/rereview-brief-template.md
 .trellis/spec/templates/review-fix-summary-template.md
@@ -220,6 +221,8 @@ SKIP existing: .claude/commands/task.md
 
 命令不应默认盲目全量读取 `.trellis/spec/`。`/task` 和 `/fix` 交给 Trellis 原生 workflow、task context 和 spec index 判断哪些项目规则相关；`/review`、`/review-fix`、`/review --rereview` 和 `/spec-cleanup` 会先读取自己的目标 guide/template，再按命令需要检查相关文件。
 
+如果 `.trellis/spec/guides/minimal-implementation.md` 存在，相关命令会在 context curation 时把它加入 `implement.jsonl` 或 `check.jsonl`；不会依赖或要求修改 `.trellis/spec/**/index.md`。
+
 ## 开发位置选择
 
 worktree 选择发生在 `/task` 中，并且必须在 implementation 前完成。
@@ -381,6 +384,7 @@ trellis-kit init
 
 test -f .trellis/spec/guides/review-workflow.md
 test -f .trellis/spec/guides/review-loop-workflow.md
+test -f .trellis/spec/guides/minimal-implementation.md
 test -f .trellis/spec/templates/review-brief-template.md
 test -f .trellis/spec/templates/rereview-brief-template.md
 test -f .trellis/spec/templates/review-fix-summary-template.md

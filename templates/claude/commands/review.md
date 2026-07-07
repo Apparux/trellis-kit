@@ -32,6 +32,15 @@ Rereview mode additionally reads:
 - Current fix diff and any task-related untracked files.
 - `.trellis/spec/templates/rereview-brief-template.md`.
 
+## Minimal Implementation Context
+
+If `.trellis/spec/guides/minimal-implementation.md` exists, include it in review context when over-engineering, cleanup, deprecated compatibility, broad refactor risk, or unnecessary abstraction risk is relevant:
+
+- Add it to `check.jsonl` when curating check/review context.
+- Mention over-engineering as one review dimension only; correctness, security, regression risk, requirement coverage, data integrity, permissions, and tests have higher priority.
+- Do not rely on `.trellis/spec/**/index.md` to discover this guide.
+- Do not modify any `index.md` file for this purpose.
+
 ## Outputs
 
 Normal review writes:
