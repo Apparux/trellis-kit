@@ -1,0 +1,4 @@
+{"seq":11,"ts":"2026-07-10T00:00:01.000Z","kind":"progress","by":"check-codex","text":"Inspecting changes"}
+{"seq":12,"ts":"2026-07-10T00:00:02.000Z","kind":"message","by":"check-codex","text":"# Review Result\n\nDraft finding."}
+{"seq":13,"ts":"2026-07-10T00:00:03.000Z","kind":"message","by":"check-codex","text":"# Review Result\n\n## Blocking\n\nNone\n\n## Should Fix\n\nNo findings."}
+{"seq":14,"ts":"2026-07-10T00:00:04.000Z","kind":"done","by":"check-codex"}

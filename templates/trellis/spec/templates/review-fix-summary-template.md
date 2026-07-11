@@ -1,8 +1,13 @@
 # Review Fix Summary
 
-## Source Review
+## Source Complete Pair
 
-Path: `Unknown`
+- Pair: `NNN`
+- Markdown path: `codex-review-NNN.md`
+- Raw JSONL path: `codex-review-NNN.jsonl`
+- Provenance validated: `Unknown`
+
+This summary must use the source review's same number. Do not overwrite an existing `review-fix-summary-NNN.md`.
 
 ## Fixed Findings
 
@@ -30,10 +35,10 @@ None
 
 ## Suggested Rereview Input
 
-Run `/review --rereview` for the active Trellis task.
+Run `/review --rereview` for the active Trellis task. Rereview must consume this same-number summary and source complete pair, then allocate the next unused three-digit pair.
 
 Suggested input context:
 
 ```text
-Rereview mode. Read the latest review result and this review fix summary. Verify that Blocking and Should Fix findings were fixed, check whether the fixes introduced regressions, and report only remaining Blocking/Should Fix items plus any Verified Fixed or False Positive / Not Applicable findings.
+Rereview mode. Read codex-review-NNN.md, codex-review-NNN.jsonl, and review-fix-summary-NNN.md. Verify that Blocking and Should Fix findings were fixed, check for regressions, and report only remaining actionable items plus Verified Fixed or False Positive / Not Applicable findings.
 ```

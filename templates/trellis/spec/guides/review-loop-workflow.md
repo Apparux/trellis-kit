@@ -2,145 +2,112 @@
 
 ## Purpose
 
-This guide defines the channel-driven Trellis review loop:
+This guide preserves the stage boundary in the Channel-driven review loop:
 
 ```text
 implementation -> /review -> /review-fix -> /review --rereview
 ```
 
-`/review` owns normal review and rereview dispatch through `trellis channel`. `/review-fix` owns local fixes for actionable review findings.
+Review stages inspect and report only. `/review-fix` is the explicit modification stage. Review workers are spawned without a Trellis agent card; the current numbered no-edit brief supplies system-prompt context and a self-fixing check role must never be substituted.
 
-## When to Use
+## Round Model
 
-Use this guide when a task needs Codex review through the Trellis channel runtime and a follow-up fix/rereview loop.
-
-## Inputs
-
-The loop uses:
-
-- active Trellis task artifacts
-- saved review brief files under `.trellis/tasks/<task>/review/`
-- saved Codex review results under `.trellis/tasks/<task>/review/`
-- saved review fix summaries under `.trellis/tasks/<task>/review/`
-- current git diff for implementation and fix scope
-
-## Outputs
-
-Expected files:
+Each round has one three-digit identifier:
 
 ```text
-.trellis/tasks/<task>/review/review-brief.md
-.trellis/tasks/<task>/review/codex-review.md
-.trellis/tasks/<task>/review/review-fix-summary.md
-.trellis/tasks/<task>/review/rereview-brief.md
-.trellis/tasks/<task>/review/codex-review-001.md
+review-brief-NNN.md or rereview-brief-NNN.md
+codex-review-NNN.jsonl
+codex-review-NNN.md
+review-fix-summary-NNN.md
 ```
 
-Use numbered variants when history exists.
+The JSONL file is the full post-send Channel audit. Trellis 0.6.6 raw events identify the author with `by`; `--from` is only the CLI filter and there is no raw `from` field. The Markdown file is one provenance line plus one LF plus the exact last non-empty worker message before the first send-after `done`; it is not trimmed, reformatted, or raw JSONL renamed to `.md`.
 
-## `/review` Policy
+A new Markdown result is written only for a complete pair: valid ordered Channel event objects, matching structured provenance, a send-after event with `event.kind === "done"` and `event.by === "check-codex"`, an earlier final message by that worker, expected title, sibling match, and unchanged full Git-visible/untracked/context snapshot. Incomplete pairs and provenance-bearing orphans are ignored by automatic selection.
 
-`/review` prepares a review brief and delegates execution to `trellis channel`.
+If no complete numbered pair exists, fallback is limited to `codex-review.md` / `codex-review-<digits>.md` with no provenance and no same-stem JSONL sibling. Automatic fallback requires one candidate; multiple files require explicit user choice. Legacy files are not renamed or migrated.
 
-It must:
+## Normal Review
 
-- identify the active task
-- read task artifacts and current git scope
-- write `review-brief*.md`
-- create a traceable review channel
-- spawn a Codex check worker through `trellis channel spawn --agent check --provider codex`
-- send the brief with `--text-file`
-- wait with `--kind done`
-- save `trellis channel messages --raw --from check-codex --last 100` as `codex-review*.md`
+1. Allocate the next unused `NNN` in `001` through `999` and create `review-brief-NNN.md` only while absent; stop on exhaustion or collision.
+2. Capture full before-review status, unstaged/staged binary diffs, and NUL-delimited Git-visible untracked paths through binary-safe Node `execFile`, never a shell variable. Hash untracked files, the numbered brief, selected review/fix inputs, and direct/manifest-supplied task/spec context; hash symlink targets without following them outside the workspace. Diff stats alone are insufficient.
+3. Create `trellis channel create ... --ephemeral --task ... --by review`.
+4. Spawn without an agent card using explicit `--provider codex --as check-codex`, and pass the current numbered brief through `--file` as mandatory system-prompt context. Do not pass any `--agent` option or install another agent type.
+5. Send the same numbered brief through targeted `--text-file` to start the turn. Require send exit 0 and parse its entire stdout with `JSON.parse`; validate `event.kind === "message"`, `event.by === "review"`, `event.to === "check-codex"`, and positive integer `event.seq` as `SEND_SEQ`.
+6. Query `messages --raw --from check-codex --since SEND_SEQ --kind done`; non-zero exit is failure, while exit 0 plus empty output means no completion.
+7. Only if history is not complete, call `wait --kind done`; after exit 0 or 124, query history again and parse raw `event.by === "check-codex"`.
+8. Treat historical `done` with `seq > SEND_SEQ` as authoritative. A wait timeout without historical `done` remains a timeout; done without a final message is complete but cannot form a pair.
+9. Before writing post-worker artifacts, compare the same full snapshot. If it changed or snapshotting failed, fail and report without automatic rollback.
+10. Save exact complete post-send history as `codex-review-NNN.jsonl` without `--last`, requiring the messages command to succeed and using binary-safe stdout capture plus exclusive file creation; do not use PowerShell text redirection for the formal raw artifact.
+11. Parse JSONL structurally and write one provenance line, one LF, and the exact untrimmed final message to `codex-review-NNN.md` only when all complete-pair checks pass.
 
-It must not:
+The Channel remains ephemeral but retained for diagnosis. There is no automatic removal.
 
-- implement custom worker scheduling
-- poll or parse channel event logs directly as the primary result path
-- depend on custom completion tags
-- modify code while running review
-- commit, push, merge, rebase, or finish-work
+## Review Fix
 
-## `/review-fix` Policy
+`/review-fix` chooses the numerically largest complete pair after validating all candidates. An explicit numbered path still requires the matching JSONL sibling. It fixes Blocking and Should Fix by default and writes `review-fix-summary-NNN.md` with the same source number.
 
-`/review-fix` reads the latest saved Codex review result and fixes actionable findings.
+It must not overwrite an existing summary, spawn a worker, wait on Channel events, invoke an external reviewer, or launch rereview.
 
-Finding categories:
+## Rereview
 
-- Blocking
-- Should Fix
-- Nice to Have
-- False Positive
-- Needs Human Decision
+`/review --rereview` requires:
 
-Default behavior:
+- latest complete `codex-review-NNN.md` + `codex-review-NNN.jsonl`
+- same-number `review-fix-summary-NNN.md`
+- current fix diff and task context
 
-- Fix Blocking findings.
-- Fix Should Fix findings.
-- Do not fix Nice to Have findings unless clearly low-risk and design-aligned.
-- Do not change code for False Positive findings; document why.
-- Do not make broad changes for Needs Human Decision; document the decision needed.
+It starts allocation at `NNN+1`, chooses the next unused number through `999` without overwriting, writes `rereview-brief-NNN.md`, and follows the same ephemeral/read-only/send-seq/history/JSONL/Markdown flow.
 
-`/review-fix` must not call Codex, Claude Review, any external reviewer, `trellis channel spawn`, `trellis channel wait`, `/review`, or `/review --rereview`.
+Rereview output uses:
 
-After fixes, it writes `review-fix-summary*.md` with source review, fixed findings, changed files, false positives, deferred findings, checks, remaining risks, and suggested rereview input.
+```text
+# Rereview Result
+## Blocking
+## Should Fix
+## Nice to Have
+## Verified Fixed
+## False Positive / Not Applicable
+## New Risks Introduced
+## Final Recommendation
+```
 
-## `/review --rereview` Policy
+Do not restore a standalone `/rereview` command.
 
-Rereview is a mode of `/review`, not a separate runtime.
+## Completion Truth
 
-It reads the latest prior review result, latest review fix summary, and current fix diff, then sends `rereview-brief*.md` through the same `trellis channel` create/spawn/send/wait/messages flow.
+`wait` listens from the event position present when it starts. Therefore:
 
-The rereview prompt must focus Codex on:
+- history after `SEND_SEQ` is checked before wait
+- wait is only a low-latency path
+- history is checked again after wait exits 0 or 124
+- a parsed historical event with `kind === "done"`, `by === "check-codex"`, and `seq > SEND_SEQ` is final truth
+- done without a final message is completion with an incomplete artifact, not timeout
+- exit-0 empty history means no done; query failure or malformed JSON is an error, not empty history
+- no historical `done` after a successful query means true timeout
 
-- whether previous review findings were fixed
-- whether fixes introduced new problems
-- whether Blocking issues remain
-- avoiding repeated Nice to Have findings already confirmed as not being handled
-- avoiding repeated issues already marked False Positive
+Do not add a poller, direct event-store reader, or custom runtime to change this behavior.
 
-The requested output must be grouped as:
+## Troubleshooting And Cleanup
 
-- Blocking
-- Should Fix
-- Nice to Have
-- Verified Fixed
-- False Positive / Not Applicable
-- New Risks Introduced
-- Final Recommendation
-
-## Failure Handling
-
-If no saved review result exists, run `/review` first.
-
-If `/review-fix` cannot safely classify or fix a finding, mark it Needs Human Decision.
-
-If a channel worker stalls during `/review`, inspect:
+Use supported diagnostics:
 
 ```bash
 trellis channel messages <channel-name> --raw --last 100
 trellis channel messages <channel-name> --raw --kind progress --last 100
-trellis channel ls
+trellis channel list --all
 ```
 
-Do not use direct `events.jsonl` reads unless channel CLI diagnostics are insufficient.
+Preview retained ephemeral cleanup:
 
-## Examples
-
-Normal review:
-
-```text
-/review
+```bash
+trellis channel prune --scope project --ephemeral
 ```
 
-Fix actionable findings:
+Explicitly delete after approval:
 
-```text
-/review-fix
+```bash
+trellis channel prune --scope project --ephemeral --yes
 ```
 
-Rereview fixes:
-
-```text
-/review --rereview
-```
+Never use `channel run` for this flow because successful runs remove their Channel. Never auto-revert a reviewer write; report the before/after difference so user or concurrent work is not destroyed.

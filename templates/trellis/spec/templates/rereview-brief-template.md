@@ -1,5 +1,14 @@
 # Rereview Brief
 
+## Review Artifact
+
+- New pair: `NNN`
+- Brief path: `rereview-brief-NNN.md`
+- Raw result path: `codex-review-NNN.jsonl`
+- Normalized result path: `codex-review-NNN.md`
+
+The dispatcher injects this numbered brief with `spawn --file` as system-prompt context, then sends the same file through the worker inbox to start the turn and record `SEND_SEQ`. It creates normalized Markdown only after valid ordered Channel events, a send-after worker `done`, an exact final message, and an unchanged full Git-visible/untracked/context snapshot are verified. Raw event authorship uses `by`, not `from`.
+
 ## Task
 
 - Task title: `Unknown`
@@ -10,13 +19,16 @@
 
 `Unknown`
 
-## Source Review
+## Source Complete Pair
 
-Path: `Unknown`
+- Pair: `Unknown`
+- Markdown path: `Unknown`
+- JSONL path: `Unknown`
 
 ## Review Fix Summary
 
-Path: `Unknown`
+- Same source pair: `Unknown`
+- Path: `review-fix-summary-NNN.md`
 
 ## Fix Summary
 
@@ -48,19 +60,15 @@ Unknown
 
 ## Rereview Focus
 
-Verify whether previous review findings were fixed, whether fixes introduced regressions, and whether Blocking issues remain.
+Verify whether previous findings were fixed, whether fixes introduced regressions, and whether Blocking issues remain.
 
 ## Git Diff Scope
 
 Type: Local working tree changes after review fixes
 
-Review the current project/worktree changes related to the original findings and fixes, including:
+Review only changes related to the original findings and fixes, including staged, unstaged, and task-related untracked files.
 
-- staged changes
-- unstaged changes
-- task-related untracked files
-
-Suggested commands:
+Suggested read-only commands:
 
 ```bash
 git status --short
@@ -68,7 +76,7 @@ git diff
 git diff --cached
 ```
 
-Do not review unrelated repository files outside this scope.
+Do not review unrelated repository files.
 
 ## Known Risks
 
@@ -76,24 +84,24 @@ Unknown
 
 ## Review Prompt
 
-Please rereview the implementation fixes as a code reviewer.
-
-Read this brief first, then inspect only the declared Git Diff Scope.
+Read this brief, the validated source pair, and the same-number fix summary. Report only review findings; do not modify the project.
 
 Focus only on:
 
-1. Whether previous review findings were fixed.
+1. Whether previous findings were fixed.
 2. Whether fixes introduced new issues.
 3. Whether Blocking issues remain.
-4. Do not repeat Nice to Have findings already confirmed as not being handled.
+4. Do not repeat Nice to Have findings already confirmed as deferred.
 5. Do not repeat issues already marked False Positive.
 
-Do not modify code.
-Do not commit.
-Do not run external reviewers.
-Do not review the entire repository.
+Do not modify, create, delete, rename, format, or generate project files.
+Do not self-fix findings.
+Use only read-only Git, search, file-reading, and existing validation commands known not to write project state.
+Do not install dependencies or run checks known to write cache/generated state.
+Do not commit, checkout, reset, stash, merge, rebase, or push.
+Do not run external reviewers or review the entire repository.
 
-Use this output format:
+Use exactly this output format:
 
 ```markdown
 # Rereview Result

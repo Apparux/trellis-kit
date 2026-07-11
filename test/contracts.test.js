@@ -1,0 +1,706 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const fixtureDir = path.join(root, "test", "fixtures");
+
+const expectedMappings = new Map([
+  ["templates/trellis/spec/guides/review-workflow.md", ".trellis/spec/guides/review-workflow.md"],
+  ["templates/trellis/spec/guides/review-loop-workflow.md", ".trellis/spec/guides/review-loop-workflow.md"],
+  ["templates/trellis/spec/guides/minimal-implementation.md", ".trellis/spec/guides/minimal-implementation.md"],
+  ["templates/trellis/spec/templates/review-brief-template.md", ".trellis/spec/templates/review-brief-template.md"],
+  ["templates/trellis/spec/templates/rereview-brief-template.md", ".trellis/spec/templates/rereview-brief-template.md"],
+  ["templates/trellis/spec/templates/review-fix-summary-template.md", ".trellis/spec/templates/review-fix-summary-template.md"],
+  ["templates/trellis/spec/guides/development-location-decision.md", ".trellis/spec/guides/development-location-decision.md"],
+  ["templates/trellis/spec/guides/fast-path-change-policy.md", ".trellis/spec/guides/fast-path-change-policy.md"],
+  ["templates/trellis/spec/guides/spec-cleanup-guide.md", ".trellis/spec/guides/spec-cleanup-guide.md"],
+  ["templates/claude/commands/coding.md", ".claude/commands/coding.md"],
+  ["templates/claude/commands/fix.md", ".claude/commands/fix.md"],
+  ["templates/claude/commands/review.md", ".claude/commands/review.md"],
+  ["templates/claude/commands/review-fix.md", ".claude/commands/review-fix.md"],
+  ["templates/claude/commands/spec-cleanup.md", ".claude/commands/spec-cleanup.md"],
+]);
+
+const legacyTargets = [
+  ".trellis/scripts/codex-review.sh",
+  ".trellis/scripts/codex-rereview.sh",
+  ".trellis/scripts/codex-review.ps1",
+  ".trellis/scripts/codex-rereview.ps1",
+  ".trellis/spec/scripts/codex-review.sh",
+  ".trellis/spec/scripts/codex-rereview.sh",
+  ".trellis/spec/scripts/codex-review.ps1",
+  ".trellis/spec/scripts/codex-rereview.ps1",
+  ".trellis/spec/guides/claude-codex-review-workflow.md",
+  ".trellis/spec/guides/review-handoff-workflow.md",
+  ".trellis/spec/templates/codex-handoff-template.md",
+  ".trellis/spec/templates/review-handoff-template.md",
+  ".trellis/spec/templates/rereview-handoff-template.md",
+  ".claude/commands/handoff.md",
+  ".claude/commands/rereview.md",
+  ".claude/commands/task.md",
+];
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
+function listFiles(directory, prefix = "") {
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const relativePath = path.join(prefix, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listFiles(path.join(directory, entry.name), relativePath));
+    } else if (entry.isFile()) {
+      files.push(relativePath);
+    }
+  }
+  return files;
+}
+
+function runCli(args, cwd) {
+  return execFileSync(process.execPath, [path.join(root, "bin", "trellis-kit.js"), ...args], {
+    cwd,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function runGit(args, cwd) {
+  return execFileSync("git", ["-c", "core.autocrlf=false", ...args], {
+    cwd,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function makeTempDirectory(t, prefix) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  return directory;
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function parseMappings(source) {
+  const mappings = new Map();
+  const objectPattern = /\{\s*from:\s*"([^"]+)",\s*to:\s*"([^"]+)"(?:,\s*executable:\s*true)?\s*,?\s*\}/g;
+  for (const match of source.matchAll(objectPattern)) {
+    mappings.set(match[1], match[2]);
+  }
+  return mappings;
+}
+
+function parseJsonl(source) {
+  return source
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== "")
+    .map((line, index) => {
+      let event;
+      try {
+        event = JSON.parse(line);
+      } catch (error) {
+        throw new Error(`Invalid JSONL at line ${index + 1}: ${error.message}`);
+      }
+      if (
+        event === null ||
+        typeof event !== "object" ||
+        Array.isArray(event) ||
+        !Number.isInteger(event.seq) ||
+        typeof event.ts !== "string" ||
+        typeof event.kind !== "string" ||
+        typeof event.by !== "string" ||
+        event.by.trim() === ""
+      ) {
+        throw new Error(`Invalid Channel event at line ${index + 1}`);
+      }
+      return event;
+    });
+}
+
+function firstDoneAfterSend(events, sendSeq) {
+  return (
+    events.find(
+      (event) => event.kind === "done" && event.by === "check-codex" && event.seq > sendSeq,
+    ) ?? null
+  );
+}
+
+function completedReview(events, sendSeq) {
+  const done = firstDoneAfterSend(events, sendSeq);
+  if (!done) return null;
+
+  const messages = events.filter(
+    (event) =>
+      event.kind === "message" &&
+      event.by === "check-codex" &&
+      event.seq > sendSeq &&
+      event.seq < done.seq &&
+      typeof event.text === "string" &&
+      event.text.trim() !== "",
+  );
+  return messages.at(-1)?.text ?? null;
+}
+
+function isCompleteWorkerStream(events, sendSeq) {
+  let previousSeq = sendSeq;
+  for (const event of events) {
+    if (event.by !== "check-codex" || event.seq <= previousSeq) return false;
+    previousSeq = event.seq;
+  }
+  return firstDoneAfterSend(events, sendSeq) !== null;
+}
+
+function completionStatus(waitExitCode, events, sendSeq) {
+  return {
+    complete: firstDoneAfterSend(events, sendSeq) !== null,
+    waitTimedOut: waitExitCode === 124,
+  };
+}
+
+function provenance(pair, sendSeq = 10) {
+  return `<!-- trellis-review: ${JSON.stringify({
+    pair,
+    channel: `review-example-${pair}`,
+    sendSeq,
+    jsonl: `codex-review-${pair}.jsonl`,
+    workspaceStable: true,
+  })} -->`;
+}
+
+function writePair(directory, pair, jsonl, markdown) {
+  fs.writeFileSync(path.join(directory, `codex-review-${pair}.jsonl`), jsonl);
+  if (markdown !== null) {
+    fs.writeFileSync(path.join(directory, `codex-review-${pair}.md`), markdown);
+  }
+}
+
+function parseProvenance(markdown) {
+  const newline = markdown.indexOf("\n");
+  if (newline < 0) return null;
+
+  const firstLine = markdown.slice(0, newline);
+  const prefix = "<!-- trellis-review: ";
+  const suffix = " -->";
+  if (!firstLine.startsWith(prefix) || !firstLine.endsWith(suffix)) return null;
+
+  return {
+    metadata: JSON.parse(firstLine.slice(prefix.length, -suffix.length)),
+    body: markdown.slice(newline + 1),
+  };
+}
+
+function hasExpectedReviewTitle(message) {
+  return (
+    message === "# Review Result" ||
+    message.startsWith("# Review Result\n") ||
+    message === "# Rereview Result" ||
+    message.startsWith("# Rereview Result\n")
+  );
+}
+
+function completePairs(directory) {
+  const pairs = [];
+  for (const name of fs.readdirSync(directory)) {
+    const match = /^codex-review-(\d{3})\.md$/.exec(name);
+    if (!match) continue;
+
+    const pair = match[1];
+    if (pair === "000") continue;
+    const jsonlName = `codex-review-${pair}.jsonl`;
+    const jsonlPath = path.join(directory, jsonlName);
+    if (!fs.existsSync(jsonlPath)) continue;
+
+    try {
+      const markdown = fs.readFileSync(path.join(directory, name), "utf8");
+      const parsedMarkdown = parseProvenance(markdown);
+      const metadata = parsedMarkdown?.metadata;
+      const events = parseJsonl(fs.readFileSync(jsonlPath, "utf8"));
+      const streamComplete = metadata ? isCompleteWorkerStream(events, metadata.sendSeq) : false;
+      const finalMessage = streamComplete ? completedReview(events, metadata.sendSeq) : null;
+      if (
+        metadata?.pair === pair &&
+        typeof metadata.channel === "string" &&
+        metadata.channel.trim() !== "" &&
+        Number.isInteger(metadata.sendSeq) &&
+        metadata.sendSeq > 0 &&
+        metadata.jsonl === jsonlName &&
+        metadata.workspaceStable === true &&
+        finalMessage !== null &&
+        hasExpectedReviewTitle(finalMessage) &&
+        finalMessage === parsedMarkdown.body
+      ) {
+        pairs.push(pair);
+      }
+    } catch {
+      // Invalid and orphaned artifacts are intentionally excluded.
+    }
+  }
+  return pairs.sort();
+}
+
+function selectReview(directory) {
+  const pairs = completePairs(directory);
+  if (pairs.length > 0) return { kind: "pair", pair: pairs.at(-1) };
+
+  const legacy = fs.readdirSync(directory).filter((name) => {
+    if (!/^codex-review(?:-\d+)?\.md$/.test(name)) return false;
+    const jsonlSibling = `${name.slice(0, -3)}.jsonl`;
+    if (fs.existsSync(path.join(directory, jsonlSibling))) return false;
+    const markdown = fs.readFileSync(path.join(directory, name), "utf8");
+    try {
+      return parseProvenance(markdown) === null;
+    } catch {
+      return false;
+    }
+  });
+  if (legacy.length === 1) return { kind: "legacy", file: legacy[0] };
+  if (legacy.length > 1) throw new Error("Ambiguous legacy review artifacts");
+  return null;
+}
+
+test("installer registers and installs all 14 source-to-target mappings byte-for-byte", (t) => {
+  const actualMappings = parseMappings(read("bin/trellis-kit.js"));
+  assert.deepEqual(actualMappings, expectedMappings);
+
+  const targetRoot = makeTempDirectory(t, "trellis-kit-init-");
+  runCli(["init"], targetRoot);
+
+  for (const [source, target] of expectedMappings) {
+    assert.deepEqual(fs.readFileSync(path.join(targetRoot, target)), fs.readFileSync(path.join(root, source)), target);
+  }
+  for (const target of legacyTargets) {
+    assert.equal(fs.existsSync(path.join(targetRoot, target)), false, target);
+  }
+});
+
+test("init dry-run reports all mappings without creating target directories", (t) => {
+  const targetRoot = makeTempDirectory(t, "trellis-kit-dry-run-");
+  const output = runCli(["init", "--dry-run"], targetRoot);
+
+  for (const target of expectedMappings.values()) {
+    assert.ok(output.includes(`WOULD CREATE ${target}`), target);
+  }
+  assert.equal(fs.existsSync(path.join(targetRoot, ".trellis")), false);
+  assert.equal(fs.existsSync(path.join(targetRoot, ".claude")), false);
+});
+
+test("active product files use channel list --all and never executable channel ls", () => {
+  const files = [
+    "README.md",
+    "README.en.md",
+    "README.zh-CN.md",
+    ...listFiles(path.join(root, "templates"))
+      .filter((name) => name.endsWith(".md"))
+      .map((name) => path.join("templates", name)),
+  ];
+  for (const file of files) {
+    assert.doesNotMatch(read(file), /trellis channel ls(?:\s|$)/m, file);
+  }
+  assert.match(read("templates/claude/commands/review.md"), /trellis channel list --all/);
+});
+
+test("review command encodes the 0.6.6 review-only and artifact contracts", () => {
+  const command = read("templates/claude/commands/review.md");
+  for (const expected of [
+    "trellis channel spawn <channel-name>",
+    "--provider codex",
+    "--as check-codex",
+    '--file "$NUMBERED_BRIEF"',
+    "--ephemeral",
+    "SEND_SEQ",
+    "--since \"$SEND_SEQ\"",
+    "--kind done",
+    "codex-review-NNN.jsonl",
+    "codex-review-NNN.md",
+    "JSON.parse",
+    'event.by === "review"',
+    'event.to === "check-codex"',
+    'event.by === "check-codex"',
+    "git status --short",
+    "git diff --binary",
+    "git diff --cached --binary",
+    "git ls-files --others --exclude-standard -z",
+    "binary-safe",
+    'flag: "wx"',
+    "trellis channel prune --scope project --ephemeral",
+    "trellis channel prune --scope project --ephemeral --yes",
+    "positive integer",
+  ]) {
+    assert.ok(command.includes(expected), `missing review contract: ${expected}`);
+  }
+  assert.match(
+    command,
+    /trellis channel spawn <channel-name>[\s\\]+--provider codex[\s\\]+--as check-codex[\s\\]+--file "\$NUMBERED_BRIEF"/,
+  );
+  const briefCreation = command.indexOf("Select the next unused `NNN` and write `review-brief-NNN.md`");
+  const spawnCommand = command.indexOf("trellis channel spawn <channel-name>");
+  const sendCommand = command.indexOf('trellis channel send "$CHANNEL"');
+  assert.ok(briefCreation >= 0 && briefCreation < spawnCommand && spawnCommand < sendCommand);
+  assert.match(command, /--file "\$NUMBERED_BRIEF"[\s\S]*--text-file "\$NUMBERED_BRIEF"/);
+  assert.doesNotMatch(command, /--agent review\b/);
+  assert.doesNotMatch(command, /--agent check\b/);
+  assert.doesNotMatch(command, /event\.from\s*===/);
+  assert.doesNotMatch(command, /^\s*trellis channel run\b/m);
+  assert.doesNotMatch(command, /--last 100 > <review-result-path>/);
+  assert.doesNotMatch(command, /--since "\$SEND_SEQ"\s*>/);
+});
+
+test("history done after send sequence is authoritative even when wait times out", () => {
+  const events = parseJsonl(fs.readFileSync(path.join(fixtureDir, "complete-review.jsonl"), "utf8"));
+  assert.deepEqual(completionStatus(124, events, 10), { complete: true, waitTimedOut: true });
+  assert.deepEqual(completionStatus(124, events, 14), { complete: false, waitTimedOut: true });
+  assert.equal(
+    completedReview(events, 10),
+    "# Review Result\n\n## Blocking\n\nNone\n\n## Should Fix\n\nNo findings.",
+  );
+
+  const doneWithoutMessage = parseJsonl(
+    '{"seq":41,"ts":"2026-07-10T00:00:00.000Z","kind":"done","by":"check-codex"}\n',
+  );
+  assert.deepEqual(completionStatus(124, doneWithoutMessage, 40), {
+    complete: true,
+    waitTimedOut: true,
+  });
+  assert.equal(completedReview(doneWithoutMessage, 40), null);
+});
+
+test("raw Channel events use by as the author field and reject a from-only fixture", () => {
+  assert.throws(
+    () =>
+      parseJsonl(
+        '{"seq":1,"ts":"2026-07-10T00:00:00.000Z","kind":"done","from":"check-codex"}\n',
+      ),
+    /Invalid Channel event at line 1/,
+  );
+});
+
+test("full diff and untracked content hashes detect changes that status and diff stat miss", (t) => {
+  const directory = makeTempDirectory(t, "trellis-workspace-snapshot-");
+  runGit(["init", "--quiet"], directory);
+  fs.mkdirSync(path.join(directory, ".git", "no-hooks"));
+  runGit(["config", "core.hooksPath", ".git/no-hooks"], directory);
+  fs.writeFileSync(path.join(directory, "tracked.txt"), "alpha\n");
+  runGit(["add", "tracked.txt"], directory);
+  runGit(
+    [
+      "-c",
+      "user.name=Trellis Test",
+      "-c",
+      "user.email=trellis-test@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "--quiet",
+      "-m",
+      "baseline",
+    ],
+    directory,
+  );
+
+  fs.writeFileSync(path.join(directory, "tracked.txt"), "bravo\n");
+  fs.writeFileSync(path.join(directory, "untracked.txt"), "one\n");
+  const statusBefore = runGit(["status", "--short", "--untracked-files=all"], directory);
+  const statBefore = runGit(["diff", "--stat"], directory);
+  const diffBefore = runGit(["diff", "--binary"], directory);
+  const untrackedBefore = sha256(fs.readFileSync(path.join(directory, "untracked.txt")));
+
+  fs.writeFileSync(path.join(directory, "tracked.txt"), "cider\n");
+  fs.writeFileSync(path.join(directory, "untracked.txt"), "two\n");
+  const statusAfter = runGit(["status", "--short", "--untracked-files=all"], directory);
+  const statAfter = runGit(["diff", "--stat"], directory);
+  const diffAfter = runGit(["diff", "--binary"], directory);
+  const untrackedAfter = sha256(fs.readFileSync(path.join(directory, "untracked.txt")));
+
+  assert.equal(statusAfter, statusBefore);
+  assert.equal(statAfter, statBefore);
+  assert.notEqual(diffAfter, diffBefore);
+  assert.notEqual(untrackedAfter, untrackedBefore);
+});
+
+test("invalid JSONL and missing done cannot form a complete review", () => {
+  const incomplete = parseJsonl(fs.readFileSync(path.join(fixtureDir, "incomplete-review.jsonl"), "utf8"));
+  assert.equal(completedReview(incomplete, 20), null);
+  assert.throws(
+    () => parseJsonl(fs.readFileSync(path.join(fixtureDir, "malformed-review.jsonl"), "utf8")),
+    /Invalid JSONL at line 2/,
+  );
+});
+
+test("pair selection ignores orphans, selects latest complete pair, and falls back to one legacy file", (t) => {
+  const directory = makeTempDirectory(t, "trellis-review-pairs-");
+  const completeJsonl = fs.readFileSync(path.join(fixtureDir, "complete-review.jsonl"), "utf8");
+  const finalMessage = completedReview(parseJsonl(completeJsonl), 10);
+
+  writePair(directory, "001", completeJsonl, `${provenance("001")}\n${finalMessage}`);
+  writePair(directory, "002", completeJsonl, null);
+  writePair(
+    directory,
+    "003",
+    fs.readFileSync(path.join(fixtureDir, "incomplete-review.jsonl"), "utf8"),
+    `${provenance("003", 20)}\nPartial\n`,
+  );
+  writePair(directory, "004", completeJsonl, `${provenance("004")}\n${finalMessage}`);
+  writePair(
+    directory,
+    "005",
+    completeJsonl,
+    `${provenance("005").replace('"workspaceStable":true', '"workspaceStable":false')}\n${finalMessage}`,
+  );
+  writePair(directory, "006", completeJsonl, `${provenance("006")}\n${finalMessage}\n`);
+
+  const rereviewEvents = parseJsonl(completeJsonl);
+  rereviewEvents.filter((event) => event.kind === "message").at(-1).text =
+    "# Rereview Result\n\n## Blocking\n\nNone\n\n## Final Recommendation\n\nReady.";
+  const rereviewJsonl = `${rereviewEvents.map((event) => JSON.stringify(event)).join("\n")}\n`;
+  const rereviewMessage = completedReview(rereviewEvents, 10);
+  writePair(directory, "007", rereviewJsonl, `${provenance("007")}\n${rereviewMessage}`);
+
+  assert.deepEqual(completePairs(directory), ["001", "004", "007"]);
+  assert.deepEqual(selectReview(directory), { kind: "pair", pair: "007" });
+
+  writePair(directory, "000", completeJsonl, `${provenance("000")}\n${finalMessage}`);
+  writePair(directory, "008", completeJsonl, `${provenance("008", 0)}\n${finalMessage}`);
+  writePair(directory, "009", completeJsonl, `${provenance("009")}\r\n${finalMessage}`);
+  assert.deepEqual(completePairs(directory), ["001", "004", "007"]);
+
+  const orphanDirectory = makeTempDirectory(t, "trellis-review-orphan-");
+  fs.writeFileSync(path.join(orphanDirectory, "codex-review-001.md"), `${provenance("001")}\n${finalMessage}`);
+  fs.writeFileSync(path.join(orphanDirectory, "codex-review-002.md"), "# Legacy-looking review\n");
+  fs.writeFileSync(
+    path.join(orphanDirectory, "codex-review-002.jsonl"),
+    fs.readFileSync(path.join(fixtureDir, "incomplete-review.jsonl")),
+  );
+  assert.equal(selectReview(orphanDirectory), null);
+
+  const legacyDirectory = makeTempDirectory(t, "trellis-review-legacy-");
+  fs.writeFileSync(path.join(legacyDirectory, "review-brief-001.md"), "# Not a review result\n");
+  fs.writeFileSync(path.join(legacyDirectory, "review-fix-summary-001.md"), "# Not a review result\n");
+  fs.writeFileSync(path.join(legacyDirectory, "codex-review-007.md"), "# Legacy review\n");
+  assert.deepEqual(selectReview(legacyDirectory), { kind: "legacy", file: "codex-review-007.md" });
+  fs.writeFileSync(path.join(legacyDirectory, "codex-review.md"), "# Another legacy review\n");
+  assert.throws(() => selectReview(legacyDirectory), /Ambiguous legacy review artifacts/);
+});
+
+test("review-fix and rereview require complete numbered pairs and same-number summaries", () => {
+  const reviewFix = read("templates/claude/commands/review-fix.md");
+  const review = read("templates/claude/commands/review.md");
+  for (const expected of [
+    "complete pair",
+    "codex-review-NNN.md",
+    "codex-review-NNN.jsonl",
+    "review-fix-summary-NNN.md",
+    'event.by === "check-codex"',
+    "no same-stem JSONL sibling",
+  ]) {
+    assert.ok(reviewFix.includes(expected), `review-fix missing: ${expected}`);
+  }
+  for (const expected of [
+    "complete pair",
+    "review-fix-summary-NNN.md",
+    "NNN+1",
+    'event.by === "check-codex"',
+    "no same-stem JSONL sibling",
+  ]) {
+    assert.ok(review.includes(expected), `rereview missing: ${expected}`);
+  }
+});
+
+test("coding, fix, and spec-cleanup retain their stage boundaries", () => {
+  const coding = read("templates/claude/commands/coding.md");
+  for (const expected of [
+    "task.py current --source",
+    "task.py list-archive",
+    "task.py start <resolved-task-path>",
+    "get_context.py --mode phase --step <X.X> --platform claude",
+    "Do not automatically generate Review Brief Markdown or run review",
+  ]) {
+    assert.ok(coding.includes(expected), `coding missing: ${expected}`);
+  }
+
+  const fix = read("templates/claude/commands/fix.md");
+  for (const expected of [
+    "Stay in the current workspace for `/fix`",
+    "Do not auto-generate Review Brief or run review",
+    "Do not auto-commit",
+  ]) {
+    assert.ok(fix.includes(expected), `fix missing: ${expected}`);
+  }
+
+  const specCleanup = read("templates/claude/commands/spec-cleanup.md");
+  for (const expected of [
+    "Automatically move clear archive candidates",
+    "Automatically merge low-risk duplicate specs",
+    "stop and ask the user",
+    "Run external reviewer tools",
+  ]) {
+    assert.ok(specCleanup.includes(expected), `spec-cleanup missing: ${expected}`);
+  }
+});
+
+test("review briefs enforce the complete no-edit boundary", () => {
+  for (const file of [
+    "templates/trellis/spec/templates/review-brief-template.md",
+    "templates/trellis/spec/templates/rereview-brief-template.md",
+  ]) {
+    const brief = read(file);
+    for (const expected of [
+      "Do not modify, create, delete, rename, format, or generate project files.",
+      "Do not self-fix findings.",
+      "Use only read-only Git, search, file-reading, and existing validation commands known not to write project state.",
+      "Do not install dependencies or run checks known to write cache/generated state.",
+      "Do not commit, checkout, reset, stash, merge, rebase, or push.",
+      "Do not run external reviewers or review the entire repository.",
+    ]) {
+      assert.ok(brief.includes(expected), `${file} missing no-edit boundary: ${expected}`);
+    }
+  }
+});
+
+test("review dispatch is agentless and no review agent is packaged or installed", () => {
+  const command = read("templates/claude/commands/review.md");
+  const installer = read("bin/trellis-kit.js");
+  assert.doesNotMatch(command, /--agent (?:review|check)\b/);
+  assert.match(command, /--provider codex/);
+  assert.match(command, /--as check-codex/);
+  assert.match(command, /--file "\$NUMBERED_BRIEF"/);
+  assert.equal(fs.existsSync(path.join(root, "templates/trellis/agents/review.md")), false);
+  assert.doesNotMatch(installer, /templates\/trellis\/agents\/review\.md/);
+  assert.doesNotMatch(installer, /\.trellis\/agents\/review\.md/);
+});
+
+test("current generated copies match all 14 packaged sources and omit review agent", (t) => {
+  const hasRuntimeCopies = fs.existsSync(path.join(root, ".trellis")) && fs.existsSync(path.join(root, ".claude"));
+  if (!hasRuntimeCopies) {
+    t.skip("clean package checkout has no gitignored runtime copies");
+    return;
+  }
+
+  for (const [source, target] of expectedMappings) {
+    const targetPath = path.join(root, target);
+    assert.equal(fs.existsSync(targetPath), true, `missing generated target: ${target}`);
+    assert.deepEqual(fs.readFileSync(targetPath), fs.readFileSync(path.join(root, source)), target);
+  }
+  assert.equal(fs.existsSync(path.join(root, ".trellis/agents/review.md")), false);
+});
+
+test("ordinary update preserves legacy files and prune-old is explicit", (t) => {
+  const targetRoot = makeTempDirectory(t, "trellis-kit-prune-");
+  runCli(["init"], targetRoot);
+
+  for (const target of legacyTargets) {
+    const targetPath = path.join(targetRoot, target);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, "legacy\n");
+  }
+  const currentTarget = ".claude/commands/review.md";
+  fs.writeFileSync(path.join(targetRoot, currentTarget), "locally modified\n");
+  const updateDryRunOutput = runCli(["update", "--dry-run"], targetRoot);
+  assert.ok(updateDryRunOutput.includes(`WOULD OVERWRITE ${currentTarget}`));
+  assert.equal(fs.readFileSync(path.join(targetRoot, currentTarget), "utf8"), "locally modified\n");
+
+  const ordinaryOutput = runCli(["update"], targetRoot);
+  assert.doesNotMatch(ordinaryOutput, /(?:WOULD )?DELETE/);
+  assert.deepEqual(
+    fs.readFileSync(path.join(targetRoot, currentTarget)),
+    fs.readFileSync(path.join(root, "templates/claude/commands/review.md")),
+  );
+  for (const target of legacyTargets) {
+    assert.equal(fs.existsSync(path.join(targetRoot, target)), true, target);
+  }
+
+  const dryRunOutput = runCli(["update", "--dry-run", "--prune-old"], targetRoot);
+  for (const target of legacyTargets) {
+    assert.match(dryRunOutput, new RegExp(`WOULD DELETE ${target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    assert.equal(fs.existsSync(path.join(targetRoot, target)), true, target);
+  }
+
+  const pruneOutput = runCli(["update", "--prune-old"], targetRoot);
+  for (const target of legacyTargets) {
+    assert.match(pruneOutput, new RegExp(`DELETE ${target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    assert.equal(fs.existsSync(path.join(targetRoot, target)), false, target);
+  }
+});
+
+test("prune-old removes a broken legacy symlink and preserves a legacy-path directory", {
+  skip: process.platform === "win32" && "symlink creation may require elevated Windows privileges",
+}, (t) => {
+  const targetRoot = makeTempDirectory(t, "trellis-kit-prune-types-");
+  const symlinkTarget = path.join(targetRoot, legacyTargets[0]);
+  const directoryTarget = path.join(targetRoot, legacyTargets[1]);
+  fs.mkdirSync(path.dirname(symlinkTarget), { recursive: true });
+  fs.symlinkSync(path.join(targetRoot, "missing-target"), symlinkTarget);
+  fs.mkdirSync(directoryTarget, { recursive: true });
+
+  const output = runCli(["update", "--prune-old"], targetRoot);
+  assert.equal(fs.existsSync(symlinkTarget), false);
+  assert.match(output, new RegExp(`DELETE ${legacyTargets[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  assert.equal(fs.statSync(directoryTarget).isDirectory(), true);
+  assert.match(output, new RegExp(`SKIP non-file: ${legacyTargets[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+});
+
+test("README installed-file lists cover every mapping", () => {
+  for (const readme of ["README.md", "README.en.md", "README.zh-CN.md"]) {
+    const contents = read(readme);
+    for (const target of expectedMappings.values()) {
+      assert.ok(contents.includes(target), `${readme} missing ${target}`);
+    }
+    for (const target of legacyTargets) {
+      assert.ok(contents.includes(target), `${readme} missing prune target ${target}`);
+    }
+  }
+  assert.equal(read("README.md"), read("README.zh-CN.md"));
+  for (const readme of ["README.md", "README.en.md", "README.zh-CN.md"]) {
+    const contents = read(readme);
+    assert.match(contents, /--provider claude --as review-claude --file/, readme);
+    assert.doesNotMatch(contents, /--agent (?:review|check)\b/, readme);
+    assert.ok(contents.includes("test ! -e .trellis/agents/review.md"), `${readme} missing review-agent exclusion check`);
+    assert.ok(contents.includes('event.by === "check-codex"'), `${readme} missing raw-event author schema`);
+    assert.ok(contents.includes("binary-safe"), `${readme} missing cross-shell raw capture guidance`);
+  }
+});
+
+test("npm package contains current templates and excludes legacy entrypoints", () => {
+  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  const output = execFileSync(npm, ["pack", "--dry-run", "--json"], { cwd: root, encoding: "utf8" });
+  const manifest = JSON.parse(output);
+  const files = new Set(manifest[0].files.map((file) => file.path));
+
+  assert.equal(files.has("bin/trellis-kit.js"), true);
+  for (const source of expectedMappings.keys()) {
+    assert.equal(files.has(source), true, `package missing ${source}`);
+  }
+  for (const legacy of [
+    "templates/trellis/agents/review.md",
+    "templates/claude/commands/handoff.md",
+    "templates/claude/commands/rereview.md",
+    "templates/claude/commands/task.md",
+    "templates/trellis/scripts/codex-review.sh",
+    "templates/trellis/scripts/codex-rereview.sh",
+    "templates/trellis/scripts/codex-review.ps1",
+    "templates/trellis/scripts/codex-rereview.ps1",
+    "templates/trellis/spec/guides/claude-codex-review-workflow.md",
+    "templates/trellis/spec/guides/review-handoff-workflow.md",
+    "templates/trellis/spec/templates/codex-handoff-template.md",
+    "templates/trellis/spec/templates/review-handoff-template.md",
+    "templates/trellis/spec/templates/rereview-handoff-template.md",
+  ]) {
+    assert.equal(files.has(legacy), false, `package unexpectedly contains ${legacy}`);
+  }
+});
+
+test("npm publish workflow runs contract tests before syntax and package checks", () => {
+  const workflow = read(".github/workflows/npm-publish.yml");
+  const testStep = workflow.indexOf("run: npm test");
+  const syntaxStep = workflow.indexOf("run: node --check bin/trellis-kit.js");
+  const packStep = workflow.indexOf("run: npm pack --dry-run");
+  assert.ok(testStep >= 0, "missing npm test gate");
+  assert.ok(testStep < syntaxStep && syntaxStep < packStep, "publish validation steps are out of order");
+});
