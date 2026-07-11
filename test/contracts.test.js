@@ -98,6 +98,57 @@ function parseMappings(source) {
   return mappings;
 }
 
+function parseNpmPackManifest(output, packageName) {
+  const context = `npm pack --dry-run --json output for package "${packageName}"`;
+  let payload;
+  try {
+    payload = JSON.parse(output);
+  } catch (error) {
+    throw new Error(`${context} is not valid JSON: ${error.message}`);
+  }
+
+  let manifest;
+  if (Array.isArray(payload)) {
+    const matches = payload.filter(
+      (candidate) =>
+        candidate !== null &&
+        typeof candidate === "object" &&
+        !Array.isArray(candidate) &&
+        candidate.name === packageName,
+    );
+    if (matches.length > 1) {
+      throw new Error(`${context} contains multiple npm 11 manifests for the package`);
+    }
+    [manifest] = matches;
+  } else if (payload !== null && typeof payload === "object" && Object.hasOwn(payload, packageName)) {
+    manifest = payload[packageName];
+  }
+
+  if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
+    throw new Error(
+      `${context} does not contain a manifest in the npm 11 array or npm 12 package-name object schema`,
+    );
+  }
+  if (manifest.name !== packageName) {
+    throw new Error(`${context} manifest has an unexpected package name: ${JSON.stringify(manifest.name)}`);
+  }
+  if (!Array.isArray(manifest.files) || manifest.files.length === 0) {
+    throw new Error(`${context} manifest is missing a non-empty files array`);
+  }
+  for (const [index, file] of manifest.files.entries()) {
+    if (
+      file === null ||
+      typeof file !== "object" ||
+      Array.isArray(file) ||
+      typeof file.path !== "string" ||
+      file.path.trim() === ""
+    ) {
+      throw new Error(`${context} manifest has an invalid file entry at files[${index}]`);
+    }
+  }
+  return manifest;
+}
+
 function parseJsonl(source) {
   return source
     .split(/\r?\n/)
@@ -667,11 +718,87 @@ test("README installed-file lists cover every mapping", () => {
   }
 });
 
+test("npm pack JSON parser supports npm 11 and npm 12 while selecting the named package", () => {
+  const packageName = "trellis-kit";
+  const files = [{ path: "bin/trellis-kit.js" }];
+  const expectedManifest = { name: packageName, files };
+  const otherManifest = { name: "another-package", files: [{ path: "other.js" }] };
+  const npm11Output = JSON.stringify([otherManifest, expectedManifest]);
+  const npm12Output = JSON.stringify({
+    "another-package": otherManifest,
+    [packageName]: expectedManifest,
+  });
+
+  assert.deepEqual(parseNpmPackManifest(npm11Output, packageName), expectedManifest);
+  assert.deepEqual(parseNpmPackManifest(npm12Output, packageName), expectedManifest);
+});
+
+test("npm pack JSON parser rejects malformed or ambiguous manifests with context", () => {
+  const invalidJson = /npm pack --dry-run --json output for package "trellis-kit".*not valid JSON/i;
+  const missingManifest = /npm pack --dry-run --json output for package "trellis-kit".*does not contain a manifest/i;
+  const files = [{ path: "bin/trellis-kit.js" }];
+
+  assert.throws(() => parseNpmPackManifest("", "trellis-kit"), invalidJson);
+  assert.throws(() => parseNpmPackManifest("{", "trellis-kit"), invalidJson);
+  assert.throws(() => parseNpmPackManifest("[]", "trellis-kit"), missingManifest);
+  assert.throws(
+    () => parseNpmPackManifest(JSON.stringify([{ name: "another-package", files }]), "trellis-kit"),
+    missingManifest,
+  );
+  assert.throws(
+    () => parseNpmPackManifest(JSON.stringify({ "another-package": { name: "another-package", files } }), "trellis-kit"),
+    missingManifest,
+  );
+  assert.throws(
+    () => parseNpmPackManifest(JSON.stringify({ "trellis-kit": null }), "trellis-kit"),
+    missingManifest,
+  );
+  assert.throws(
+    () => parseNpmPackManifest(JSON.stringify({ "trellis-kit": {} }), "trellis-kit"),
+    /npm pack --dry-run --json output for package "trellis-kit".*package name/i,
+  );
+  assert.throws(
+    () =>
+      parseNpmPackManifest(
+        JSON.stringify([
+          { name: "trellis-kit", files },
+          { name: "trellis-kit", files },
+        ]),
+        "trellis-kit",
+      ),
+    /npm pack --dry-run --json output for package "trellis-kit".*multiple/i,
+  );
+  assert.throws(
+    () =>
+      parseNpmPackManifest(
+        JSON.stringify({ "trellis-kit": { name: "another-package", files } }),
+        "trellis-kit",
+      ),
+    /npm pack --dry-run --json output for package "trellis-kit".*package name/i,
+  );
+});
+
+test("npm pack JSON parser rejects missing, empty, or malformed files with context", () => {
+  const context = /npm pack --dry-run --json output for package "trellis-kit".*files/i;
+  const output = (files) => JSON.stringify({ "trellis-kit": { name: "trellis-kit", files } });
+
+  assert.throws(
+    () => parseNpmPackManifest(JSON.stringify({ "trellis-kit": { name: "trellis-kit" } }), "trellis-kit"),
+    context,
+  );
+  assert.throws(() => parseNpmPackManifest(output([]), "trellis-kit"), context);
+  assert.throws(() => parseNpmPackManifest(output("bin/trellis-kit.js"), "trellis-kit"), context);
+  assert.throws(() => parseNpmPackManifest(output([null]), "trellis-kit"), context);
+  assert.throws(() => parseNpmPackManifest(output([{}]), "trellis-kit"), context);
+  assert.throws(() => parseNpmPackManifest(output([{ path: "" }]), "trellis-kit"), context);
+});
+
 test("npm package contains current templates and excludes legacy entrypoints", () => {
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
   const output = execFileSync(npm, ["pack", "--dry-run", "--json"], { cwd: root, encoding: "utf8" });
-  const manifest = JSON.parse(output);
-  const files = new Set(manifest[0].files.map((file) => file.path));
+  const packageName = JSON.parse(read("package.json")).name;
+  const manifest = parseNpmPackManifest(output, packageName);
+  const files = new Set(manifest.files.map((file) => file.path));
 
   assert.equal(files.has("bin/trellis-kit.js"), true);
   for (const source of expectedMappings.keys()) {
