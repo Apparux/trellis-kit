@@ -2,7 +2,7 @@
 
 Trellis Kit 不替代 Trellis 原生工作流，只补充几个聚焦的 Claude 命令：
 
-- `/task <task-id>`：切换/启动/继续 Trellis task，并在 implementation 前决定开发位置。
+- `/coding <task-id>`：切换/启动/继续 Trellis task，并在 implementation 前决定开发位置。
 - `/fix <request>`：小 bug、小改动的快车道。
 - `/review`：为当前 Trellis task 生成 review brief，并通过 `trellis channel` 调用 Codex check worker；也支持 rereview mode。
 - `/review-fix`：读取最近一次 Codex review 结果，只修复 Blocking / Should Fix findings。
@@ -55,7 +55,7 @@ trellis-kit
 .trellis/spec/guides/development-location-decision.md
 .trellis/spec/guides/fast-path-change-policy.md
 .trellis/spec/guides/spec-cleanup-guide.md
-.claude/commands/task.md
+.claude/commands/coding.md
 .claude/commands/fix.md
 .claude/commands/review.md
 .claude/commands/review-fix.md
@@ -141,21 +141,21 @@ trellis-kit init --force --dry-run
 默认情况下，`init` 会跳过已有文件：
 
 ```text
-SKIP existing: .claude/commands/task.md
+SKIP existing: .claude/commands/coding.md
 ```
 
 ## 日常工作流
 
-### `/task <task-id>` — 完整 Trellis Task 入口
+### `/coding <task-id>` — 完整 Trellis Task 入口
 
-使用 `/task <task-id>` 处理已准备好的 Trellis task。它会解析当前或指定 task，只在唯一匹配后切换 task，读取开发位置选择 guide，在需要 implementation 前询问使用当前工作区还是 `.worktrees/<task-id>`，然后继续 Trellis 原生 `/trellis:continue` 阶段路由。
+使用 `/coding <task-id>` 处理已准备好的 Trellis task。它会解析当前或指定 task，只在唯一匹配后切换 task，读取开发位置选择 guide，在需要 implementation 前询问使用当前工作区还是 `.worktrees/<task-id>`，然后继续 Trellis 原生 `/trellis:continue` 阶段路由。
 
 ```text
-/task 06-24-school-operation-log
-/task school-operation-log
+/coding 06-24-school-operation-log
+/coding school-operation-log
 ```
 
-`/task` 不创建新 task，不默认读取整个 `.trellis/spec/`，不自动生成 Review Brief，也不会自动 review、commit、push、merge、rebase 或 finish-work。
+`/coding` 不创建新 task，不默认读取整个 `.trellis/spec/`，不自动生成 Review Brief，也不会自动 review、commit、push、merge、rebase 或 finish-work。
 
 ### `/fix <request>` — 快速修复
 
@@ -413,13 +413,13 @@ Final Recommendation
 
 ## 选择性 Spec 加载
 
-命令不应默认盲目全量读取 `.trellis/spec/`。`/task` 和 `/fix` 交给 Trellis 原生 workflow、task context 和 spec index 判断哪些项目规则相关；`/review`、`/review-fix`、`/review --rereview` 和 `/spec-cleanup` 会先读取自己的目标 guide/template，再按命令需要检查相关文件。
+命令不应默认盲目全量读取 `.trellis/spec/`。`/coding` 和 `/fix` 交给 Trellis 原生 workflow、task context 和 spec index 判断哪些项目规则相关；`/review`、`/review-fix`、`/review --rereview` 和 `/spec-cleanup` 会先读取自己的目标 guide/template，再按命令需要检查相关文件。
 
 如果 `.trellis/spec/guides/minimal-implementation.md` 存在，相关命令会在 context curation 时把它加入 `implement.jsonl` 或 `check.jsonl`；不会依赖或要求修改 `.trellis/spec/**/index.md`。
 
 ## 开发位置选择
 
-worktree 选择发生在 `/task` 中，并且必须在 implementation 前完成。
+worktree 选择发生在 `/coding` 中，并且必须在 implementation 前完成。
 
 如果用户选择任务专用 worktree，固定使用：
 
@@ -686,8 +686,8 @@ trellis channel ls
 - 运行 `trellis init`。
 - 安装 Trellis、Claude Code 或 Codex CLI。
 - 在安装过程中运行 Codex Review。
-- 默认删除文件；只有 `update --prune-old` 会删除 `.trellis/scripts/` 和 `.trellis/spec/scripts/` 下文档列出的遗留 review 脚本，以及 `.trellis/spec/` 下已改名的旧模板。
-- 删除目标项目中旧版本留下的 Claude 命令文件。
+- 默认删除文件；只有 `update --prune-old` 会删除 `.trellis/scripts/` 和 `.trellis/spec/scripts/` 下文档列出的遗留 review 脚本、`.trellis/spec/` 下已改名的旧模板，以及旧的 `.claude/commands/task.md`。
+- 在未显式使用 `update --prune-old` 时删除目标项目中旧版本留下的 Claude 命令文件。
 - 在未传入 `--force` 的 `init` 或未明确运行 `update` 时覆盖文件。
 - push、merge 或 rebase。
 - 修改远端仓库。
@@ -713,7 +713,7 @@ trellis-kit update
 
 `update` 会用包内模板覆盖已安装的 kit 文件。运行前请先检查本地自定义内容。
 
-如果你正在从旧版本迁移，旧版本曾把 review 脚本安装到 `.trellis/scripts/` 或 `.trellis/spec/scripts/`，或在 `.trellis/spec/` 下安装过已改名的旧 Review Brief 模板，可以在安装当前文件后显式清理这些旧文件：
+如果你正在从旧版本迁移，旧版本曾把 review 脚本安装到 `.trellis/scripts/` 或 `.trellis/spec/scripts/`、在 `.trellis/spec/` 下安装过已改名的旧 Review Brief 模板，或安装过 `.claude/commands/task.md`，可以在安装当前文件后显式清理这些旧文件：
 
 ```bash
 trellis-kit update --prune-old
@@ -737,6 +737,7 @@ trellis-kit update --prune-old
 .trellis/spec/templates/rereview-handoff-template.md
 .claude/commands/handoff.md
 .claude/commands/rereview.md
+.claude/commands/task.md
 ```
 
 不确定时先 dry run：
@@ -750,7 +751,9 @@ trellis-kit update --dry-run --prune-old
 
 ### Claude 命令面
 
-旧版本可能安装过 `.claude/commands/dev.md`。如果存在，请确认不再需要后手动删除。
+旧版本可能安装过 `.claude/commands/task.md`。当前入口是 `/coding`，且不会安装兼容别名；运行 `trellis-kit update --prune-old` 可删除旧文件。
+
+更早版本也可能安装过 `.claude/commands/dev.md`。如果存在，请确认不再需要后手动删除。
 
 ### Worktree 路径变更
 
@@ -791,7 +794,7 @@ test -f .trellis/spec/templates/review-fix-summary-template.md
 test -f .trellis/spec/guides/development-location-decision.md
 test -f .trellis/spec/guides/fast-path-change-policy.md
 test -f .trellis/spec/guides/spec-cleanup-guide.md
-test -f .claude/commands/task.md
+test -f .claude/commands/coding.md
 test -f .claude/commands/fix.md
 test -f .claude/commands/review.md
 test -f .claude/commands/review-fix.md

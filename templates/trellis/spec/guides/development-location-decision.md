@@ -2,13 +2,13 @@
 
 ## Goal
 
-Worktree decisions happen only inside `/task`, before implementation starts.
+Worktree decisions happen only inside `/coding`, before implementation starts.
 
 The agent must not automatically choose between the current working tree and a task-specific git worktree.
 
 ## Required Decision Point
 
-When `/task <task-id>` reaches a task that has not yet entered implementation, ask this exact question before creating a worktree, switching branches, starting implementation, or modifying code:
+When `/coding <task-id>` reaches a task that has not yet entered implementation, ask this exact question before creating a worktree, switching branches, starting implementation, or modifying code:
 
 ```text
 当前 task 是：<task-id>
@@ -142,7 +142,7 @@ If the task has already entered implementation and the current workspace has cod
 
 ## Fast Path Fix
 
-For `/fix`, follow `fast-path-change-policy.md`. Fast Path Fix is intended for small current-workspace changes. If the current workspace is not safe for the fix, stop and ask the user to use `/task <task-id>` for a prepared full Trellis task, or retry after the workspace is clean.
+For `/fix`, follow `fast-path-change-policy.md`. Fast Path Fix is intended for small current-workspace changes. If the current workspace is not safe for the fix, stop and ask the user to use `/coding <task-id>` for a prepared full Trellis task, or retry after the workspace is clean.
 
 ## Forbidden
 
@@ -152,7 +152,7 @@ Do not do any of the following before the user chooses:
 - Create `.worktrees/`
 - Edit `.gitignore`
 - Switch branch
-- Start implementation for a full `/task` task
+- Start implementation for a full `/coding` task
 - Modify code
 - Push
 - Merge

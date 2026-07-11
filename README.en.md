@@ -2,7 +2,7 @@
 
 Trellis Kit does not replace Trellis native workflow. It adds focused Claude commands around it:
 
-- `/task <task-id>`: switch/start/continue a Trellis task and decide the development location before implementation.
+- `/coding <task-id>`: switch/start/continue a Trellis task and decide the development location before implementation.
 - `/fix <request>`: lightweight fast path for small fixes.
 - `/review`: generate a review brief for the current Trellis task and invoke a Codex check worker through `trellis channel`; also supports rereview mode.
 - `/review-fix`: read the latest Codex review result and fix only Blocking / Should Fix findings by default.
@@ -51,7 +51,7 @@ Running `trellis-kit init` installs Markdown templates and Claude command templa
 .trellis/spec/guides/development-location-decision.md
 .trellis/spec/guides/fast-path-change-policy.md
 .trellis/spec/guides/spec-cleanup-guide.md
-.claude/commands/task.md
+.claude/commands/coding.md
 .claude/commands/fix.md
 .claude/commands/review.md
 .claude/commands/review-fix.md
@@ -137,21 +137,21 @@ For routine updates to already installed kit files, use `update` instead of `ini
 By default, `init` skips existing files:
 
 ```text
-SKIP existing: .claude/commands/task.md
+SKIP existing: .claude/commands/coding.md
 ```
 
 ## Daily Workflow
 
-### `/task <task-id>` — Full Trellis Task Entrypoint
+### `/coding <task-id>` — Full Trellis Task Entrypoint
 
-Use `/task <task-id>` for prepared Trellis tasks. It resolves the current or requested task, switches only after exactly one match is found, reads the development-location guide, asks whether to use the current workspace or `.worktrees/<task-id>` before implementation when needed, and then continues native `/trellis:continue` phase routing.
+Use `/coding <task-id>` for prepared Trellis tasks. It resolves the current or requested task, switches only after exactly one match is found, reads the development-location guide, asks whether to use the current workspace or `.worktrees/<task-id>` before implementation when needed, and then continues native `/trellis:continue` phase routing.
 
 ```text
-/task 06-24-school-operation-log
-/task school-operation-log
+/coding 06-24-school-operation-log
+/coding school-operation-log
 ```
 
-`/task` does not create a new task, does not load all of `.trellis/spec/` by default, does not automatically generate Review Brief, and does not review, commit, push, merge, rebase, or finish-work.
+`/coding` does not create a new task, does not load all of `.trellis/spec/` by default, does not automatically generate Review Brief, and does not review, commit, push, merge, rebase, or finish-work.
 
 ### `/fix <request>` — Fast Path Fix
 
@@ -409,13 +409,13 @@ If the rereview channel times out or the worker stalls, use the same diagnostics
 
 ## Selective Spec Loading
 
-Commands should not blindly load the entire `.trellis/spec/` directory by default. `/task` and `/fix` rely on native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/review`, `/review-fix`, `/review --rereview`, and `/spec-cleanup` read their targeted guide/template first, then inspect only the files needed for the command.
+Commands should not blindly load the entire `.trellis/spec/` directory by default. `/coding` and `/fix` rely on native Trellis workflow, task context, and spec indexes to decide which project rules are relevant. `/review`, `/review-fix`, `/review --rereview`, and `/spec-cleanup` read their targeted guide/template first, then inspect only the files needed for the command.
 
 When `.trellis/spec/guides/minimal-implementation.md` exists, relevant commands curate it into `implement.jsonl` or `check.jsonl`; they do not rely on or require edits to `.trellis/spec/**/index.md`.
 
 ## Development Location
 
-Worktree selection happens inside `/task`, before implementation.
+Worktree selection happens inside `/coding`, before implementation.
 
 If the user chooses a task-specific worktree, Trellis Kit uses:
 
@@ -688,8 +688,8 @@ The installer does not:
 - Run `trellis init`.
 - Install Trellis, Claude Code, or Codex CLI.
 - Run Codex Review during installation.
-- Delete files by default; only `update --prune-old` deletes the documented legacy review scripts under `.trellis/scripts/` and `.trellis/spec/scripts/`, plus old renamed templates under `.trellis/spec/`.
-- Delete older target-project Claude command files.
+- Delete files by default; only `update --prune-old` deletes the documented legacy review scripts under `.trellis/scripts/` and `.trellis/spec/scripts/`, old renamed templates under `.trellis/spec/`, and the old `.claude/commands/task.md` command.
+- Delete older target-project Claude command files unless `update --prune-old` is explicitly used.
 - Overwrite files unless `--force` is used with `init` or `update` is used intentionally.
 - Push, merge, or rebase.
 - Modify remote repositories.
@@ -715,7 +715,7 @@ trellis-kit update
 
 `update` overwrites installed kit files with the packaged templates. Review local customizations before running it.
 
-If you are migrating from a version that installed review scripts under `.trellis/scripts/` or `.trellis/spec/scripts/`, or old renamed Review Brief templates under `.trellis/spec/`, explicitly prune those old files after installing the current files:
+If you are migrating from a version that installed review scripts under `.trellis/scripts/` or `.trellis/spec/scripts/`, old renamed Review Brief templates under `.trellis/spec/`, or `.claude/commands/task.md`, explicitly prune those old files after installing the current files:
 
 ```bash
 trellis-kit update --prune-old
@@ -739,6 +739,7 @@ trellis-kit update --prune-old
 .trellis/spec/templates/rereview-handoff-template.md
 .claude/commands/handoff.md
 .claude/commands/rereview.md
+.claude/commands/task.md
 ```
 
 Use dry run first when unsure:
@@ -752,7 +753,9 @@ trellis-kit update --dry-run --prune-old
 
 ### Claude Command Surface
 
-Older versions may have installed `.claude/commands/dev.md`. Remove it manually if it exists.
+Older versions may have installed `.claude/commands/task.md`. The current entrypoint is `/coding`, and no compatibility alias is installed; run `trellis-kit update --prune-old` to remove the old file.
+
+Even older versions may have installed `.claude/commands/dev.md`. Remove it manually if it exists.
 
 ### Worktree Path Change
 
@@ -793,7 +796,7 @@ test -f .trellis/spec/templates/review-fix-summary-template.md
 test -f .trellis/spec/guides/development-location-decision.md
 test -f .trellis/spec/guides/fast-path-change-policy.md
 test -f .trellis/spec/guides/spec-cleanup-guide.md
-test -f .claude/commands/task.md
+test -f .claude/commands/coding.md
 test -f .claude/commands/fix.md
 test -f .claude/commands/review.md
 test -f .claude/commands/review-fix.md

@@ -160,7 +160,7 @@ The agent may perform these actions without asking first:
 - Merge examples into canonical guides.
 - Merge missing constraints that match current approved behavior.
 - Update references from old files to canonical files.
-- Update `/task` and `/fix` command templates to remove broad load-all spec wording while preserving Trellis-native context selection.
+- Update `/coding` and `/fix` command templates to remove broad load-all spec wording while preserving Trellis-native context selection.
 - Remove stale references to old workflow names when the replacement is unambiguous.
 
 ## Actions Requiring Confirmation
@@ -306,7 +306,7 @@ The agent must ask the user before merging when:
 - The merge would change default behavior.
 - The merge affects worktree location policy.
 - The merge affects review, check, review brief generation, commit, push, merge, rebase, or finish-work behavior.
-- The merge affects `/task`, `/fix`, or `/spec-cleanup` core behavior.
+- The merge affects `/coding`, `/fix`, or `/spec-cleanup` core behavior.
 - The file appears to contain user-authored project-specific policy.
 - The file appears related to the current active Trellis task.
 - The merge requires deleting information rather than preserving or relocating it.
@@ -327,9 +327,9 @@ Commands must not blindly load the entire `.trellis/spec/` directory by default.
 
 Selective spec loading means targeted discovery and relevant rule loading, not under-reading project conventions.
 
-`/task` and `/fix` should rely on the native Trellis workflow, task context, package/layer spec indexes, and relevant manifests to decide which project rules to read.
+`/coding` and `/fix` should rely on the native Trellis workflow, task context, package/layer spec indexes, and relevant manifests to decide which project rules to read.
 
-Do not replace Trellis-native context selection with a hard-coded minimal list inside `/task` or `/fix`.
+Do not replace Trellis-native context selection with a hard-coded minimal list inside `/coding` or `/fix`.
 
 `/spec-cleanup` should read:
 
@@ -355,7 +355,7 @@ The agent must not:
 - rewrite active guide behavior without user confirmation
 - move ambiguous files without user confirmation
 - archive current active task files without user confirmation
-- load the entire `.trellis/spec/` directory during `/task` or `/fix`
+- load the entire `.trellis/spec/` directory during `/coding` or `/fix`
 - treat archived specs as active rules
 - keep multiple active guides that define conflicting workflow behavior
 - create a cleanup commit unless explicitly asked

@@ -1,15 +1,15 @@
-# /task
+# /coding
 
-Use `/task <task-id>` as the Trellis big-task entrypoint for an existing task. It resolves or switches to the requested task, makes the development-location decision before implementation, then continues through native `/trellis:continue` phase routing.
+Use `/coding <task-id>` as the Trellis big-task entrypoint for an existing task. It resolves or switches to the requested task, makes the development-location decision before implementation, then continues through native `/trellis:continue` phase routing.
 
 Usage:
 
 ```text
-/task 06-24-school-operation-log
-/task school-operation-log
+/coding 06-24-school-operation-log
+/coding school-operation-log
 ```
 
-The text after `/task` is the target task id. This command does not create a new Trellis task.
+The text after `/coding` is the target task id. This command does not create a new Trellis task.
 
 ## Required Reading
 
@@ -30,7 +30,7 @@ If `.trellis/spec/guides/minimal-implementation.md` exists, include it when cura
 
 ## Resolve The Task
 
-For every `/task <task-id>` request:
+For every `/coding <task-id>` request:
 
 1. Treat `$ARGUMENTS` as the target task id. If it is empty, ask the user for a task id and stop.
 2. Check the current active task:
@@ -88,7 +88,7 @@ python3 ./.trellis/scripts/get_context.py --mode phase --step <X.X> --platform c
 
 ## Development Location Decision
 
-Worktree decisions happen only in `/task`, before implementation.
+Worktree decisions happen only in `/coding`, before implementation.
 
 If the task has not yet entered implementation, ask this exact decision before creating a worktree, switching branches, starting implementation, or modifying code:
 
@@ -142,7 +142,7 @@ Do not automatically generate Review Brief Markdown or run review. The user may 
 
 ## Forbidden
 
-Unless the user explicitly authorizes it in the current conversation, `/task` must not automatically:
+Unless the user explicitly authorizes it in the current conversation, `/coding` must not automatically:
 
 - Create a new task
 - Re-plan when existing task status and artifacts are consistent

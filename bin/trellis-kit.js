@@ -48,8 +48,8 @@ const templateFiles = [
     to: ".trellis/spec/guides/spec-cleanup-guide.md",
   },
   {
-    from: "templates/claude/commands/task.md",
-    to: ".claude/commands/task.md",
+    from: "templates/claude/commands/coding.md",
+    to: ".claude/commands/coding.md",
   },
   {
     from: "templates/claude/commands/fix.md",
@@ -85,6 +85,7 @@ const oldFilesToPrune = [
   ".trellis/spec/templates/rereview-handoff-template.md",
   ".claude/commands/handoff.md",
   ".claude/commands/rereview.md",
+  ".claude/commands/task.md",
 ];
 
 function readPackageJson() {
@@ -114,7 +115,8 @@ Commands:
 Options:
   --force       Overwrite existing files during init. Update overwrites by default.
   --prune-old   During update, delete legacy review scripts from .trellis/scripts/
-                and .trellis/spec/scripts/, plus old renamed templates from .trellis/spec/.
+                and .trellis/spec/scripts/, old renamed templates from .trellis/spec/,
+                and old renamed commands from .claude/commands/.
   --dry-run     Preview actions without writing files or changing permissions.
   --help        Print this help message.
   --version     Print package version.
@@ -123,7 +125,7 @@ Safety:
   Existing files are skipped by init by default. This installer does not run
   Trellis, Claude Code, Codex, git push, git merge, git rebase, or modify
   .trellis/workflow.md. It deletes files only with update --prune-old
-  (legacy review scripts and old renamed templates).`);
+  (documented legacy review scripts, renamed spec templates, and renamed Claude commands).`);
 }
 
 function printVersion() {
@@ -235,12 +237,17 @@ function installFile(file, targetRoot, options) {
 function pruneOldFiles(targetRoot, dryRun) {
   for (const relativePath of oldFilesToPrune) {
     const target = path.join(targetRoot, relativePath);
-    if (!fs.existsSync(target)) {
-      console.log(`${dryRun ? "WOULD SKIP missing" : "SKIP missing"}: ${relativePath}`);
-      continue;
+    let stat;
+    try {
+      stat = fs.lstatSync(target);
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        console.log(`${dryRun ? "WOULD SKIP missing" : "SKIP missing"}: ${relativePath}`);
+        continue;
+      }
+      throw error;
     }
 
-    const stat = fs.lstatSync(target);
     if (!stat.isFile() && !stat.isSymbolicLink()) {
       console.log(`SKIP non-file: ${relativePath}`);
       continue;
@@ -261,7 +268,7 @@ function printNextSteps(command, dryRun) {
 
 Next steps:
 1. Continue or implement a prepared Trellis task in Claude Code:
-   /task <task-id>
+   /coding <task-id>
 
 2. Start a small bug fix or patch in Claude Code:
    /fix <bug description>
@@ -288,7 +295,7 @@ function installTemplates(command, options) {
 
   warnIfMissing(targetRoot, ".git", "Trellis workflow files are intended for use inside a git project.");
   warnIfMissing(targetRoot, ".trellis", "Run `trellis init -u <name> --claude --codex` first if this is a new project.");
-  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /task, /fix, /review, /review-fix, and /spec-cleanup commands available.");
+  warnIfMissing(targetRoot, ".claude", "Run Trellis/Claude Code setup first if you want the /coding, /fix, /review, /review-fix, and /spec-cleanup commands available.");
 
   if (command === "init" && options.pruneOld) {
     throw new Error("--prune-old can only be used with update");
