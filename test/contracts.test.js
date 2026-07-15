@@ -50,6 +50,27 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
+function markdownSection(source, heading) {
+  const marker = `## ${heading}`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing Markdown section: ${heading}`);
+  const bodyStart = start + marker.length;
+  const nextHeading = source.indexOf("\n## ", bodyStart);
+  return source.slice(bodyStart, nextHeading === -1 ? source.length : nextHeading);
+}
+
+function assertMarkersInOrder(source, markers) {
+  let previousIndex = -1;
+  let previousLabel = "the start of the document";
+  for (const [label, marker] of markers) {
+    const index = source.indexOf(marker);
+    assert.notEqual(index, -1, `missing ${label}: ${marker}`);
+    assert.ok(index > previousIndex, `${label} must appear after ${previousLabel}`);
+    previousIndex = index;
+    previousLabel = label;
+  }
+}
+
 function listFiles(directory, prefix = "") {
   const files = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -564,13 +585,230 @@ test("review-fix and rereview require complete numbered pairs and same-number su
   }
 });
 
+test("coding preflight resolves and inspects before activation and native context loading", () => {
+  const coding = read("templates/claude/commands/coding.md");
+  const targetedPhaseLookup =
+    "python3 ./.trellis/scripts/get_context.py --mode phase --step 1.3 --platform claude-code";
+
+  assertMarkersInOrder(coding, [
+    ["read-only task resolution", "## Resolve The Task Without Mutation"],
+    ["resolved-path readiness inspection", "## Inspect Resolved Task Readiness"],
+    ["manifest preflight", "## Preflight Task Context Manifests"],
+    ["development-location and approval gates", "## Development Location And Approval Gates"],
+    ["task activation", "## Activate Or Switch The Task"],
+    ["native current-task context loading", "## Load Native Trellis Context"],
+    ["native Trellis continuation", "## Continue Native Trellis Flow"],
+  ]);
+
+  const resolution = markdownSection(coding, "Resolve The Task Without Mutation");
+  assert.match(resolution, /task\.py current --source/);
+  assert.match(resolution, /task\.py list\b/);
+  assert.match(resolution, /task\.py list-archive/);
+  assert.doesNotMatch(resolution, /task\.py (?:start|add-context)\b/);
+  assert.doesNotMatch(resolution, /get_context\.py/);
+
+  const activationHeading = coding.indexOf("## Activate Or Switch The Task");
+  const beforeActivation = coding.slice(
+    coding.indexOf("## Resolve The Task Without Mutation"),
+    activationHeading,
+  );
+  const preActivationContextCommands = beforeActivation
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("python3 ./.trellis/scripts/get_context.py"));
+  assert.deepEqual(
+    preActivationContextCommands,
+    [targetedPhaseLookup],
+    "only the targeted read-only Phase 1.3 lookup may run before activation",
+  );
+
+  const gates = markdownSection(coding, "Development Location And Approval Gates");
+  assert.match(gates, /planning/);
+  assert.match(gates, /implementation approval/i);
+
+  const activation = markdownSection(coding, "Activate Or Switch The Task");
+  const startCommand = "python3 ./.trellis/scripts/task.py start <resolved-task-path>";
+  assert.ok(activation.includes(startCommand), "activation must use the resolved task path");
+  assert.equal(coding.split(startCommand).length - 1, 1, "the activation command must appear exactly once");
+  assert.ok(coding.indexOf(startCommand) > activationHeading, "activation must follow every preflight gate");
+
+  const nativeContext = markdownSection(coding, "Load Native Trellis Context");
+  assert.match(nativeContext, /after (?:activation|the activation decision|activation or pointer switch).*succeeds/i);
+  assert.match(nativeContext, /^python3 \.\/\.trellis\/scripts\/get_context\.py$/m);
+  assert.match(nativeContext, /get_context\.py --mode phase$/m);
+  assert.match(nativeContext, /get_context\.py --mode phase --step <X\.X> --platform claude-code/);
+  assert.doesNotMatch(coding, /--platform claude(?=\s|$)/);
+});
+
+test("coding manifest preflight uses exact additive and idempotent context repair", () => {
+  const coding = read("templates/claude/commands/coding.md");
+  const preflight = markdownSection(coding, "Preflight Task Context Manifests");
+  const canonicalPath = ".trellis/spec/guides/minimal-implementation.md";
+  const implementRepair =
+    'python3 ./.trellis/scripts/task.py add-context "<resolved-task-path>" implement ".trellis/spec/guides/minimal-implementation.md" "Apply the minimal implementation rule during implementation"';
+  const checkRepair =
+    'python3 ./.trellis/scripts/task.py add-context "<resolved-task-path>" check ".trellis/spec/guides/minimal-implementation.md" "Check applicable simplification and over-engineering risks"';
+
+  for (const expected of [
+    "implement.jsonl",
+    "check.jsonl",
+    canonicalPath,
+    "non-empty parsed `file` value exactly equals the canonical path",
+    "object containing only `_example`",
+    "not a real entry",
+    "preserve every existing row",
+    "do not add a duplicate",
+    "genuinely relevant real entry",
+    "Continue the same `/coding` invocation",
+  ]) {
+    assert.ok(preflight.includes(expected), `manifest preflight missing: ${expected}`);
+  }
+
+  for (const risk of [
+    "over-engineering",
+    "cleanup",
+    "deprecated compatibility",
+    "broad refactor",
+    "unnecessary abstraction",
+  ]) {
+    assert.ok(preflight.includes(risk), `manifest preflight missing conditional check risk: ${risk}`);
+  }
+
+  assert.match(
+    preflight,
+    /guide exists[\s\S]*implement\.jsonl[\s\S]*must contain/i,
+    "implementation context must be mandatory when the installed guide exists",
+  );
+  assert.match(preflight, /check\.jsonl[\s\S]*only when/i);
+  assert.match(preflight, /no (?:listed )?check risk[\s\S]*do not add/i);
+  assert.ok(preflight.includes(implementRepair));
+  assert.ok(preflight.includes(checkRepair));
+  assert.doesNotMatch(preflight, /(?:echo|printf|cat)\b[^\n]*(?:implement|check)\.jsonl/);
+
+  assertMarkersInOrder(preflight, [
+    ["structural JSONL inspection", "Parse every nonblank JSONL row structurally"],
+    ["implementation manifest repair", implementRepair],
+    ["conditional check manifest repair", checkRepair],
+    ["post-repair manifest read", "Re-read `implement.jsonl` and `check.jsonl`"],
+    ["failed repair blocker", "a canonical entry required by steps 4 or 5 is still absent"],
+    ["task validation", "python3 ./.trellis/scripts/task.py validate <resolved-task-path>"],
+    ["context listing", "python3 ./.trellis/scripts/task.py list-context <resolved-task-path>"],
+    ["same-invocation continuation", "Continue the same `/coding` invocation"],
+  ]);
+});
+
+test("coding preflight preserves readiness modes and compatibility blockers", () => {
+  const coding = read("templates/claude/commands/coding.md");
+  const inspection = markdownSection(coding, "Inspect Resolved Task Readiness");
+  const preflight = markdownSection(coding, "Preflight Task Context Manifests");
+  const gates = markdownSection(coding, "Development Location And Approval Gates");
+  const activation = markdownSection(coding, "Activate Or Switch The Task");
+
+  for (const expected of [
+    "<resolved-task-path>/task.json",
+    "<resolved-task-path>/prd.md",
+    "<resolved-task-path>/design.md",
+    "<resolved-task-path>/implement.md",
+    "<resolved-task-path>/implement.jsonl",
+    "<resolved-task-path>/check.jsonl",
+    "Lightweight",
+    "Complex",
+    "sub-agent dispatch",
+    "inline",
+  ]) {
+    assert.ok(inspection.includes(expected), `resolved-path inspection missing: ${expected}`);
+  }
+  assert.match(inspection, /Lightweight[\s\S]*prd\.md/i);
+  assert.match(inspection, /Complex[\s\S]*prd\.md[\s\S]*design\.md[\s\S]*implement\.md/i);
+
+  for (const expected of [
+    "missing or seed-only manifests",
+    "Invalid JSONL",
+    "dangling referenced path",
+    "Inline workflows",
+    "load the guide directly",
+    "older installation",
+  ]) {
+    assert.ok(preflight.includes(expected), `compatibility preflight missing: ${expected}`);
+  }
+  assert.match(preflight, /Inline workflows[\s\S]*skip manifest mutation/i);
+  assert.match(preflight, /older installation[\s\S]*do not create a dangling entry/i);
+  assert.match(preflight, /Invalid JSONL[\s\S]*stop before repair/i);
+  assert.match(preflight, /dangling referenced path[\s\S]*stop before repair/i);
+
+  assert.match(gates, /rerun[\s\S]*preflight[\s\S]*final workspace/i);
+  for (const expected of ["planning", "non-current `in_progress`", "current `in_progress`", "completed"]) {
+    assert.ok(activation.includes(expected), `activation state table missing: ${expected}`);
+  }
+  assert.match(activation, /^\| current `in_progress` \|[^\n]*do not call `task\.py start`/im);
+  assert.match(activation, /completed[\s\S]*stop unless/i);
+});
+
+test("minimal implementation guide defines the task manifest contract", () => {
+  const guide = read("templates/trellis/spec/guides/minimal-implementation.md");
+  const contract = markdownSection(guide, "Task Context Manifest Contract");
+
+  for (const expected of [
+    ".trellis/spec/guides/minimal-implementation.md",
+    "implement.jsonl",
+    "check.jsonl",
+    "implementation sub-agent dispatch",
+    "over-engineering",
+    "cleanup",
+    "deprecated compatibility",
+    "broad refactor",
+    "unnecessary abstraction",
+    "Inline workflows",
+    "Lightweight and complex",
+    "Rows containing only `_example`",
+    "additive",
+    "older installation",
+  ]) {
+    assert.ok(contract.includes(expected), `guide manifest contract missing: ${expected}`);
+  }
+  assert.match(contract, /implement\.jsonl[\s\S]*must contain/i);
+  assert.match(contract, /check\.jsonl[\s\S]*only when/i);
+  assert.match(contract, /Inline workflows[\s\S]*load this guide directly/i);
+  assert.match(contract, /older installation[\s\S]*must not create a dangling/i);
+});
+
+test("coding preflight retains task matching and forbidden automation boundaries", () => {
+  const coding = read("templates/claude/commands/coding.md");
+  const resolution = markdownSection(coding, "Resolve The Task Without Mutation");
+  const gates = markdownSection(coding, "Development Location And Approval Gates");
+  const forbidden = markdownSection(coding, "Forbidden");
+
+  for (const expected of [
+    "exact directory-name match first",
+    "suffix match",
+    "multiple matches",
+    "Task not found: <target-id>",
+    "archived/completed",
+  ]) {
+    assert.ok(resolution.includes(expected), `task resolution boundary missing: ${expected}`);
+  }
+  assert.ok(gates.includes("请选择开发位置："));
+  assert.ok(coding.includes("Do not automatically generate Review Brief Markdown or run review"));
+  for (const forbiddenAction of [
+    "Create a new task",
+    "Run any external reviewer",
+    "Commit",
+    "Push",
+    "Merge",
+    "Rebase",
+    "Run finish-work",
+  ]) {
+    assert.ok(forbidden.includes(forbiddenAction), `forbidden boundary missing: ${forbiddenAction}`);
+  }
+});
+
 test("coding, fix, and spec-cleanup retain their stage boundaries", () => {
   const coding = read("templates/claude/commands/coding.md");
   for (const expected of [
     "task.py current --source",
     "task.py list-archive",
     "task.py start <resolved-task-path>",
-    "get_context.py --mode phase --step <X.X> --platform claude",
+    "get_context.py --mode phase --step <X.X> --platform claude-code",
     "Do not automatically generate Review Brief Markdown or run review",
   ]) {
     assert.ok(coding.includes(expected), `coding missing: ${expected}`);

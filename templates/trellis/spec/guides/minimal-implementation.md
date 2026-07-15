@@ -30,3 +30,17 @@ Simplification must not remove required behavior, permission checks, validation,
 For review tasks, treat over-engineering as one review dimension only. Correctness, security, regression risk, requirement coverage, data integrity, permissions, and tests have higher priority.
 
 For cleanup tasks, explicitly look for dead code, unused abstractions, duplicate helpers, unnecessary compatibility logic, unnecessary dependencies, and logic that can be replaced by existing project conventions.
+
+## Task Context Manifest Contract
+
+Canonical path: `.trellis/spec/guides/minimal-implementation.md`.
+
+When this guide exists and a workflow uses implementation sub-agent dispatch for implementation-oriented work, `implement.jsonl` must contain a real entry whose parsed, non-empty `file` value exactly equals the canonical path.
+
+`check.jsonl` contains the same guide only when accepted task artifacts identify at least one applicable risk: over-engineering, cleanup, deprecated compatibility, broad refactor, or unnecessary abstraction. Preserve an existing canonical check entry, but do not add one as filler when none of these risks applies. This conditional rule does not replace the normal requirement for each dispatch manifest to contain genuinely relevant real context.
+
+Inline workflows skip manifest mutation and load this guide directly. Lightweight and complex artifact classifications are independent of dispatch mode and do not change this context rule.
+
+Rows containing only `_example`, and objects without a non-empty `file`, are not real entries. Compatible repair is additive: compare parsed `file` values exactly, preserve existing rows, add a missing canonical entry once through the task context interface, and validate the final manifests. Do not rely on a spec index or modify an `index.md` file to discover or register this guide.
+
+If this guide is unavailable in an older installation, compatibility preflight must not create a dangling manifest entry or fail solely because this Kit-specific file is absent.
